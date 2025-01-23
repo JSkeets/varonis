@@ -1,0 +1,52 @@
+name: ECR Repository Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  setup-ecr:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init and Apply ECR
+      run: |
+        cd terraform/environments/us-east-1/${{ github.event.inputs.environment }}
+        terraform init -backend-config="key=env:/${{ github.event.inputs.environment }}/ecr"
+        terraform apply -auto-approve -var-file=${{ github.event.inputs.environment }}.tfvars -target=module.restaurant_svc_ecr
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build and push initial Docker image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ENVIRONMENT: ${{ github.event.inputs.environment }}
+      run: |
+        cd api
+        REPO_NAME="restaurant-svc-${ENVIRONMENT}-restaurant-svc"
+        docker build -t $ECR_REGISTRY/$REPO_NAME:latest .
+        docker push $ECR_REGISTRY/$REPO_NAME:latest

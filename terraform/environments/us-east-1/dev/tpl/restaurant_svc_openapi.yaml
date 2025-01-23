@@ -1,0 +1,23 @@
+openapi: 3.0.1
+info:
+  title: Restaurant Service API
+  description: API for managing restaurant operations and orders
+  version: 1.0.0
+paths:
+  /orders:
+    post:
+      summary: Create a new order
+      operationId: createOrder
+      x-amazon-apigateway-integration:
+        uri: ${integrations["/restaurant/web"].uri}
+        type: ${integrations["/restaurant/web"].type}
+        httpMethod: ${integrations["/restaurant/web"].http_method}
+        timeoutInMillis: ${integrations["/restaurant/web"].timeout_ms}
+        passthroughBehavior: when_no_match
+      responses:
+        '200':
+          description: Successfully created order
+          content:
+            application/json:
+              schema:
+                type: object
