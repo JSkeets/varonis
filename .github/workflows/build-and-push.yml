@@ -50,5 +50,15 @@ jobs:
       run: |
         cd api
         REPO_NAME="restaurant-svc-${ENVIRONMENT}-restaurant-svc"
-        docker build -t $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG 
+        
+        # Check if image already exists
+        if ! aws ecr describe-images \
+          --repository-name $REPO_NAME \
+          --image-ids imageTag=$IMAGE_TAG 2>/dev/null; then
+          
+          echo "Image tag $IMAGE_TAG doesn't exist, building and pushing..."
+          docker build -t $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG
+        else
+          echo "Image tag $IMAGE_TAG already exists, skipping build and push"
+        fi 
