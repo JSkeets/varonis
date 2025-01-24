@@ -1,0 +1,60 @@
+name: Build and Push Container
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'api/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'api/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+      with:
+        mask-password: true
+
+    - name: Build and push Docker image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        cd api
+        REPO_NAME="restaurant-svc-${ENVIRONMENT}-restaurant-svc"
+        
+        # Build the Docker image
+        docker build -t $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG $ECR_REGISTRY/$REPO_NAME:latest
+        
+        # Push both tagged and latest images
+        docker push $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$REPO_NAME:latest 
