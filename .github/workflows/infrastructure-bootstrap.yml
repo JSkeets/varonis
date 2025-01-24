@@ -1,4 +1,4 @@
-name: ECR Repository Setup
+name: Infrastructure Bootstrap (State Backend & ECR)
 
 on:
   workflow_dispatch:
