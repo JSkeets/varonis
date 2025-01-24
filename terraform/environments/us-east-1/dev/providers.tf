@@ -6,8 +6,11 @@ terraform {
     }
   }
   
-  backend "local" {
-    path = "terraform.tfstate"
+  backend "s3" {
+    bucket         = "restaurant-svc-dev-terraform-state"
+    key            = "environments/dev/ecr/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "restaurant-svc-dev-terraform-lock"
   }
 }
 

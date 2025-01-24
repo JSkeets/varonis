@@ -28,13 +28,41 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
+    - name: Create Terraform State Resources
+      run: |
+        # Check if S3 bucket exists, create if it doesn't
+        if ! aws s3api head-bucket --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state 2>/dev/null; then
+          aws s3api create-bucket \
+            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
+            --region us-east-1
+          
+          # Enable versioning on the new bucket
+          aws s3api put-bucket-versioning \
+            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
+            --versioning-configuration Status=Enabled
+        fi
+
+        # Check if DynamoDB table exists, create if it doesn't
+        if ! aws dynamodb describe-table --table-name restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock 2>/dev/null; then
+          aws dynamodb create-table \
+            --table-name restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock \
+            --attribute-definitions AttributeName=LockID,AttributeType=S \
+            --key-schema AttributeName=LockID,KeyType=HASH \
+            --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
+            --region us-east-1
+        fi
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
 
     - name: Terraform Init and Apply ECR
       run: |
         cd terraform/environments/us-east-1/${{ github.event.inputs.environment }}
-        terraform init -backend-config="key=env:/${{ github.event.inputs.environment }}/ecr"
+        terraform init \
+          -backend-config="bucket=restaurant-svc-${{ github.event.inputs.environment }}-terraform-state" \
+          -backend-config="key=environments/${{ github.event.inputs.environment }}/ecr/terraform.tfstate" \
+          -backend-config="region=us-east-1" \
+          -backend-config="dynamodb_table=restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock"
         terraform apply -auto-approve -var-file=${{ github.event.inputs.environment }}.tfvars -target=module.restaurant_svc_ecr
 
     - name: Login to Amazon ECR
