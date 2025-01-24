@@ -67,3 +67,14 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc" {
   policy_arn = aws_iam_policy.lambda_vpc.arn
 }
 
+resource "aws_lambda_permission" "api_gw" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.this.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # The /*/* portion grants access from any method on any resource
+  # within the specified API Gateway.
+  source_arn = "${var.api_gateway_execution_arn}/*/*"
+}
+

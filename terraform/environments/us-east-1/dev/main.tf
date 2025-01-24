@@ -41,6 +41,7 @@ module "restaurant_svc_lambda" {
   memory_size        = 128
   subnet_tag_tier    = "Private"
   timeout            = 30
+  api_gateway_execution_arn = module.api_gateway.execution_arn
 }
 
 

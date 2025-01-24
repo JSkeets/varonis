@@ -47,3 +47,8 @@ variable "subnet_tag_tier" {
   type        = string
   description = "The tag tier of the subnets (Private or Public)"
 }
+
+variable "api_gateway_execution_arn" {
+  description = "The execution ARN of the API Gateway"
+  type        = string
+}
