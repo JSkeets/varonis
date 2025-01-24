@@ -1,0 +1,103 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      region:
+        description: 'AWS Region'
+        required: true
+        default: 'us-east-1'
+        type: choice
+        options:
+          - us-east-1
+          - us-west-2
+          - eu-west-1
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ github.event.inputs.region || 'us-east-1' }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      run: |
+        cd terraform/environments/${{ github.event.inputs.region || 'us-east-1' }}/${{ github.event.inputs.environment || 'dev' }}
+        terraform init
+
+    - name: Terraform Plan
+      id: plan
+      run: |
+        cd terraform/environments/${{ github.event.inputs.region || 'us-east-1' }}/${{ github.event.inputs.environment || 'dev' }}
+        terraform plan -var-file=${{ github.event.inputs.environment || 'dev' }}.tfvars -out=tfplan
+        
+    - name: Upload Terraform Plan
+      uses: actions/upload-artifact@v3
+      with:
+        name: tfplan
+        path: terraform/environments/${{ github.event.inputs.region || 'us-east-1' }}/${{ github.event.inputs.environment || 'dev' }}/tfplan
+
+  apply:
+    needs: plan
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: 
+      name: ${{ github.event.inputs.environment || 'dev' }}
+      url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ github.event.inputs.region || 'us-east-1' }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      run: |
+        cd terraform/environments/${{ github.event.inputs.region || 'us-east-1' }}/${{ github.event.inputs.environment || 'dev' }}
+        terraform init
+
+    - name: Download Terraform Plan
+      uses: actions/download-artifact@v3
+      with:
+        name: tfplan
+        path: terraform/environments/${{ github.event.inputs.region || 'us-east-1' }}/${{ github.event.inputs.environment || 'dev' }}
+
+    - name: Terraform Apply
+      run: |
+        cd terraform/environments/${{ github.event.inputs.region || 'us-east-1' }}/${{ github.event.inputs.environment || 'dev' }}
+        terraform apply -auto-approve tfplan 

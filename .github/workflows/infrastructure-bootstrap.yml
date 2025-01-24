@@ -58,11 +58,7 @@ jobs:
     - name: Terraform Init and Apply ECR
       run: |
         cd terraform/environments/us-east-1/${{ github.event.inputs.environment }}
-        terraform init \
-          -backend-config="bucket=restaurant-svc-${{ github.event.inputs.environment }}-terraform-state" \
-          -backend-config="key=environments/${{ github.event.inputs.environment }}/ecr/terraform.tfstate" \
-          -backend-config="region=us-east-1" \
-          -backend-config="dynamodb_table=restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock"
+        terraform init
         terraform apply -auto-approve -var-file=${{ github.event.inputs.environment }}.tfvars -target=module.restaurant_svc_ecr
 
     - name: Login to Amazon ECR
