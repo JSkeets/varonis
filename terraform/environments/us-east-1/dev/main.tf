@@ -50,7 +50,7 @@ module "restaurant_svc_lambda" {
   function_name      = "restaurant-svc"
   parameter_prefix   = "/${var.service}/${var.environment}"
   memory_size        = 128
-  timeout            = 30
+  timeout            = 29
   api_gateway_execution_arn = module.api_gateway.execution_arn
   image_tag          = module.api_parameters.parameter_values["image_version"]
   
