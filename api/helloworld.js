@@ -99,14 +99,14 @@ exports.handler = async (event, context) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                restaurantRecommendation: restaurant ? {
+                restaurantRecommendations: restaurants.map(restaurant => ({
                     name: restaurant.name,
                     style: restaurant.style,
                     address: restaurant.address,
                     openHour: restaurant.openHour,
                     closeHour: restaurant.closeHour,
                     vegetarian: restaurant.isVegetarian === 'true'
-                } : null
+                }))
             })
         };
         
