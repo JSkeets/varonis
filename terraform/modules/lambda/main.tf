@@ -21,6 +21,12 @@ resource "aws_lambda_function" "this" {
     subnet_ids         = var.subnet_ids
     security_group_ids = [aws_security_group.lambda.id]
   }
+
+  environment {
+    variables = {
+      DYNAMODB_TABLE_NAME = var.dynamodb_table_name
+    }
+  }
 }
 
 resource "aws_iam_role" "lambda_exec" {
@@ -108,12 +114,5 @@ resource "aws_iam_policy" "dynamodb_access" {
       }
     ]
   })
-}
-
-resource "aws_iam_role_policy_attachment" "dynamodb_access" {
-  count = var.enable_dynamodb_access ? 1 : 0
-  
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = aws_iam_policy.dynamodb_access[0].arn
 }
 
