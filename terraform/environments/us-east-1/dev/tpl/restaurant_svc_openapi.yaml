@@ -3,7 +3,7 @@ info:
   title: "Restaurant Service API"
   version: "1.0.0"
 paths:
-  /restaurant/query:  # Updated from /restaurant/web
+  /restaurant/query:
     post:
       x-amazon-apigateway-integration:
         uri: ${integrations["/restaurant/query"].uri}
@@ -12,6 +12,7 @@ paths:
         timeoutInMillis: ${integrations["/restaurant/query"].timeout_ms}
         passthroughBehavior: "when_no_match"
         contentHandling: "CONVERT_TO_TEXT"
+      security: []  # This removes auth requirement
       responses:
         "200":
           description: "Successful operation"
