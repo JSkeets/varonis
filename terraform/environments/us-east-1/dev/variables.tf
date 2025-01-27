@@ -20,8 +20,3 @@ variable "allowed_cidrs" {
   type        = list(string)
   description = "The CIDR blocks allowed to access the API"
 }
-
-variable "vpc_name" {
-  type        = string
-  description = "The name of the VPC, which to deploy services into"
-}

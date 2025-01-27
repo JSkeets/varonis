@@ -12,7 +12,9 @@ paths:
         timeoutInMillis: ${integrations["/restaurant/query"].timeout_ms}
         passthroughBehavior: "when_no_match"
         contentHandling: "CONVERT_TO_TEXT"
-      security: []  # This removes auth requirement
+      x-amazon-apigateway-auth:
+        type: "NONE"
+      security: []
       responses:
         "200":
           description: "Successful operation"
@@ -38,15 +40,3 @@ paths:
                           type: string
                         vegetarian:
                           type: boolean
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - query
-              properties:
-                query:
-                  type: string
-                  description: "Natural language query for restaurant search"
