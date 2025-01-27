@@ -53,11 +53,6 @@ exports.handler = async (event, context) => {
     console.log('Event:', JSON.stringify(event, null, 2));
     
     try {
-        // Safely extract headers
-        const headers = event.headers || {};
-        const userAgent = headers['User-Agent'] || headers['user-agent'] || 'Unknown';
-        const sourceIp = event.requestContext?.identity?.sourceIp || 'Unknown';
-        const httpMethod = event.httpMethod || 'Unknown';
 
         // Extract query from event body
         body = JSON.parse(event.body || '{}');
@@ -99,76 +94,50 @@ exports.handler = async (event, context) => {
             restaurants = restaurants.filter(isRestaurantOpen);
         }
 
-        // Prepare response
-        const response = {
+        const responseBody = {
+            restaurantRecommendations: restaurants.map(restaurant => ({
+                name: restaurant.name,
+                style: restaurant.style,
+                address: restaurant.address,
+                openHour: restaurant.openHour,
+                closeHour: restaurant.closeHour,
+                vegetarian: restaurant.isVegetarian === 'true'
+            }))
+        };
+
+        // Write to audit table
+        await dynamodb.put({
+            TableName: process.env.AUDIT_TABLE_NAME,
+            Item: {
+                requestId: requestId,
+                timestamp: timestamp,
+                date: date,
+                query: query,
+                response: responseBody
+            }
+        }).promise();
+
+        return {
             statusCode: 200,
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                restaurantRecommendations: restaurants.map(restaurant => ({
-                    name: restaurant.name,
-                    style: restaurant.style,
-                    address: restaurant.address,
-                    openHour: restaurant.openHour,
-                    closeHour: restaurant.closeHour,
-                    vegetarian: restaurant.isVegetarian === 'true'
-                }))
-            })
+            body: JSON.stringify(responseBody)
         };
-
-        // Write to audit table
-        const auditParams = {
-            TableName: process.env.AUDIT_TABLE_NAME,
-            Item: {
-                requestId: requestId,
-                timestamp: timestamp,
-                date: date,
-                request: {
-                    query: query,
-                    parsedQuery: parsedQuery,
-                    userAgent: userAgent,
-                    sourceIp: sourceIp,
-                    httpMethod: httpMethod
-                },
-                response: {
-                    statusCode: response.statusCode,
-                    body: JSON.parse(response.body),
-                    restaurantsFound: restaurants.length
-                }
-            }
-        };
-
-        await dynamodb.put(auditParams).promise();
-        console.log('Audit log written:', JSON.stringify(auditParams.Item, null, 2));
-        
-        return response;
     } catch (error) {
         console.error('Error:', error);
         
-        // Write error to audit table with safe access to request data
-        const errorAuditParams = {
+        // Write error to audit table
+        await dynamodb.put({
             TableName: process.env.AUDIT_TABLE_NAME,
             Item: {
                 requestId: requestId,
                 timestamp: timestamp,
                 date: date,
-                request: {
-                    query: body?.query || 'No query provided',
-                    userAgent: event.headers?.['User-Agent'] || event.headers?.['user-agent'] || 'Unknown',
-                    sourceIp: event.requestContext?.identity?.sourceIp || 'Unknown',
-                    httpMethod: event.httpMethod || 'Unknown'
-                },
-                error: {
-                    message: error.message || 'Unknown error',
-                    code: error.code || 'Unknown code',
-                    stack: error.stack || 'No stack trace'
-                }
+                query: body?.query || 'No query provided',
+                error: error.message || 'Unknown error'
             }
-        };
-
-        await dynamodb.put(errorAuditParams).promise();
-        console.log('Error audit log written:', JSON.stringify(errorAuditParams.Item, null, 2));
+        }).promise();
 
         return {
             statusCode: error.statusCode || 500,
