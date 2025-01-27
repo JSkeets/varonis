@@ -14,4 +14,4 @@ RUN npm install --production
 COPY . .
 
 # Set the CMD to your handler
-CMD [ "helloworld.handler" ]
+CMD [ "restaurant.handler" ]
