@@ -33,6 +33,7 @@ resource "aws_lambda_function" "this" {
   environment {
     variables = {
       DYNAMODB_TABLE_NAME = var.dynamodb_table_name
+      AUDIT_TABLE_NAME    = var.audit_table_name
     }
   }
 
@@ -98,10 +99,11 @@ resource "aws_lambda_permission" "api_gw" {
   source_arn = "${var.api_gateway_execution_arn}/*/*"
 }
 
+# Policy for restaurants table (read-only)
 resource "aws_iam_policy" "dynamodb_access" {
   count = var.enable_dynamodb_access ? 1 : 0
   
-  name = "${var.service}-${var.environment}-${var.function_name}-dynamodb"
+  name = "${var.service}-${var.environment}-${var.function_name}-restaurants-read"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -130,11 +132,44 @@ resource "aws_iam_policy" "dynamodb_access" {
   })
 }
 
+# Separate policy for audit table (write-only)
+resource "aws_iam_policy" "audit_access" {
+  name = "${var.service}-${var.environment}-${var.function_name}-audit-write"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem"
+        ]
+        Resource = [
+          var.audit_table_arn
+        ]
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion": var.region
+          }
+          Bool = {
+            "aws:SecureTransport": "true"
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "dynamodb_access" {
   count = var.enable_dynamodb_access ? 1 : 0
   
   role       = aws_iam_role.lambda_exec.name
   policy_arn = aws_iam_policy.dynamodb_access[0].arn
+}
+
+resource "aws_iam_role_policy_attachment" "audit_access" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = aws_iam_policy.audit_access.arn
 }
 
 resource "aws_iam_policy" "ssm_policy" {

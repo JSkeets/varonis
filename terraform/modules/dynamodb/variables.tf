@@ -59,4 +59,10 @@ variable "vpc_id" {
 variable "route_table_ids" {
   description = "List of route table IDs to associate with the DynamoDB endpoint"
   type        = list(string)
+}
+
+variable "range_key" {
+  description = "The range key for the DynamoDB table"
+  type        = string
+  default     = null 
 } 

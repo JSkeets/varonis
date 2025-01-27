@@ -26,7 +26,7 @@ module "api_gateway" {
   openapi_spec_path = "${path.module}/tpl/restaurant_svc_openapi.yaml"
 
   integrations = {
-    "/restaurant/web" = {
+    "/restaurant/query" = {
       uri         = module.restaurant_svc_lambda.invoke_arn
       type        = "AWS_PROXY"
       http_method = "POST"
@@ -56,9 +56,10 @@ module "restaurant_svc_lambda" {
   
   # DynamoDB configuration
   enable_dynamodb_access = true
-  dynamodb_table_arn    = module.restaurants_table.table_arn
-  dynamodb_table_name   = module.restaurants_table.table_id
-  dynamodb_stream_arn   = module.restaurants_table.table_stream_arn
+  dynamodb_table_name    = module.restaurants_table.table_name
+  dynamodb_table_arn     = module.restaurants_table.table_arn
+  audit_table_name       = module.audit_table.table_name
+  audit_table_arn        = module.audit_table.table_arn
 }
 
 module "restaurants_table" {
@@ -116,6 +117,44 @@ module "api_parameters" {
       type  = "String"
     }
   }
+}
+
+module "audit_table" {
+  source = "../../../modules/dynamodb"
+  
+  base_label = "${var.service}-${var.environment}"
+  name       = "audit-logs"
+  vpc_id     = module.vpc.vpc_id
+  route_table_ids = module.vpc.private_route_table_ids
+  
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key    = "requestId"
+  range_key   = "timestamp"
+  
+  attributes = [
+    {
+      name = "requestId"
+      type = "S"
+    },
+    {
+      name = "timestamp"
+      type = "S"
+    },
+    {
+      name = "date"
+      type = "S"
+    }
+  ]
+  
+  global_secondary_indexes = [
+    {
+      name               = "DateIndex"
+      hash_key          = "date"
+      range_key         = "timestamp"
+      projection_type   = "ALL"
+      non_key_attributes = null
+    }
+  ]
 }
 
 
