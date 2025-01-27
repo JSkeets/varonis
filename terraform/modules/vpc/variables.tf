@@ -12,3 +12,13 @@ variable "availability_zones" {
   description = "List of availability zones in which to create subnets"
   type        = list(string)
 }
+
+variable "service" {
+  description = "Name of the service"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+}

@@ -1,4 +1,3 @@
-data "aws_region" "current" {}
 
 resource "aws_dynamodb_table" "this" {
   name           = "${var.base_label}-${var.name}"
@@ -38,39 +37,5 @@ resource "aws_dynamodb_table" "this" {
 
   tags = {
     Name = "${var.base_label}-${var.name}"
-  }
-}
-
-# VPC Endpoint for DynamoDB
-resource "aws_vpc_endpoint" "dynamodb" {
-  vpc_id            = var.vpc_id
-  service_name      = "com.amazonaws.${data.aws_region.current.name}.dynamodb"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids   = var.route_table_ids
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = "*"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:Query",
-          "dynamodb:Scan",
-          "dynamodb:PutItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem"
-        ]
-        Resource = [
-          aws_dynamodb_table.this.arn,
-          "${aws_dynamodb_table.this.arn}/index/*"
-        ]
-      }
-    ]
-  })
-
-  tags = {
-    Name = "${var.base_label}-${var.name}-dynamodb-endpoint"
   }
 } 

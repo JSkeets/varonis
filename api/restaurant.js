@@ -45,6 +45,10 @@ const isRestaurantOpen = (restaurant) => {
 };
 
 exports.handler = async (event, context) => {
+    const requestId = context.awsRequestId;
+    const timestamp = new Date().toISOString();
+    const date = timestamp.split('T')[0];
+    
     console.log('Event:', JSON.stringify(event, null, 2));
     
     try {
@@ -79,20 +83,16 @@ exports.handler = async (event, context) => {
             params.ExpressionAttributeValues[':isVeg'] = parsedQuery.isVegetarian;
         }
 
-
+        // Query restaurants
         const result = await dynamodb.query(params).promise();
-
-    
         let restaurants = result.Items;
         
-        // By default, only show open restaurants unless explicitly asked for all
+        // Filter for open restaurants
         if (!parsedQuery.includeClosedRestaurants) {
             restaurants = restaurants.filter(isRestaurantOpen);
         }
 
-     
-        const restaurant = restaurants[0];
-
+        // Prepare response
         const response = {
             statusCode: 200,
             headers: {
@@ -109,18 +109,60 @@ exports.handler = async (event, context) => {
                 }))
             })
         };
+
+        // Write to audit table
+        const auditParams = {
+            TableName: process.env.AUDIT_TABLE_NAME,
+            Item: {
+                requestId: requestId,
+                timestamp: timestamp,
+                date: date,
+                request: {
+                    query: query,
+                    parsedQuery: parsedQuery,
+                    userAgent: event.headers['User-Agent'],
+                    sourceIp: event.requestContext.identity.sourceIp,
+                    httpMethod: event.httpMethod
+                },
+                response: {
+                    statusCode: response.statusCode,
+                    body: JSON.parse(response.body),
+                    restaurantsFound: restaurants.length
+                }
+            }
+        };
+
+        await dynamodb.put(auditParams).promise();
+        console.log('Audit log written:', JSON.stringify(auditParams.Item, null, 2));
         
-        console.log('Response:', JSON.stringify(response, null, 2));
         return response;
     } catch (error) {
-        console.error('Error:', {
-            message: error.message,
-            stack: error.stack,
-            code: error.code,
-            statusCode: error.statusCode,
-            requestId: error.requestId
-        });
+        console.error('Error:', error);
         
+        // Write error to audit table
+        const errorAuditParams = {
+            TableName: process.env.AUDIT_TABLE_NAME,
+            Item: {
+                requestId: requestId,
+                timestamp: timestamp,
+                date: date,
+                request: {
+                    query: body?.query,
+                    userAgent: event.headers['User-Agent'],
+                    sourceIp: event.requestContext.identity.sourceIp,
+                    httpMethod: event.httpMethod
+                },
+                error: {
+                    message: error.message,
+                    code: error.code,
+                    stack: error.stack
+                }
+            }
+        };
+
+        await dynamodb.put(errorAuditParams).promise();
+        console.log('Error audit log written:', JSON.stringify(errorAuditParams.Item, null, 2));
+
         return {
             statusCode: error.statusCode || 500,
             headers: {

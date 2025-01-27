@@ -1,6 +1,8 @@
 module "vpc" {
   source = "../../../modules/vpc"
   name   = "restaurant"
+  service = "restaurant-svc"
+  environment = var.environment
   base_label = "restaurant-svc-${var.environment}"
   availability_zones = ["us-east-1a", "us-east-1b"]
 }
@@ -54,12 +56,12 @@ module "restaurant_svc_lambda" {
   api_gateway_execution_arn = module.api_gateway.execution_arn
   image_tag          = module.api_parameters.parameter_values["image_version"]
   
-  # DynamoDB configuration
+  dynamodb_table_name = module.restaurants_table.table_name
+  dynamodb_table_arn  = module.restaurants_table.table_arn
+  audit_table_name    = module.audit_table.table_name
+  audit_table_arn     = module.audit_table.table_arn
+  
   enable_dynamodb_access = true
-  dynamodb_table_name    = module.restaurants_table.table_name
-  dynamodb_table_arn     = module.restaurants_table.table_arn
-  audit_table_name       = module.audit_table.table_name
-  audit_table_arn        = module.audit_table.table_arn
 }
 
 module "restaurants_table" {
@@ -125,7 +127,7 @@ module "audit_table" {
   base_label = "${var.service}-${var.environment}"
   name       = "audit-logs"
   vpc_id     = module.vpc.vpc_id
-  route_table_ids = module.vpc.private_route_table_ids
+  route_table_ids = [module.vpc.private_route_table_id]
   
   billing_mode = "PAY_PER_REQUEST"
   hash_key    = "requestId"

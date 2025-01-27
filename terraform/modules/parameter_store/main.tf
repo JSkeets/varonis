@@ -9,10 +9,4 @@ resource "aws_ssm_parameter" "parameters" {
     Environment = var.environment
     Service     = var.service
   }
-
-  lifecycle {
-    ignore_changes = [
-      overwrite,  # Ignore future changes to overwrite
-    ]
-  }
 }

@@ -11,4 +11,10 @@ output "table_arn" {
 output "table_stream_arn" {
   description = "DynamoDB table stream ARN"
   value       = aws_dynamodb_table.this.stream_arn
-} 
+}
+
+output "table_name" {
+  description = "Name of the DynamoDB table"
+  value       = aws_dynamodb_table.this.name
+}
+
