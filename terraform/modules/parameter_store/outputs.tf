@@ -3,5 +3,5 @@ output "parameter_values" {
   value = {
     for k, v in aws_ssm_parameter.parameters : k => v.value
   }
-  sensitive = true 
+  sensitive = true
 } 

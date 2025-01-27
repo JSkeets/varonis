@@ -1,9 +1,9 @@
 module "vpc" {
-  source = "../../../modules/vpc"
-  name   = "restaurant"
-  service = "restaurant-svc"
-  environment = var.environment
-  base_label = "restaurant-svc-${var.environment}"
+  source             = "../../../modules/vpc"
+  name               = "restaurant"
+  service            = "restaurant-svc"
+  environment        = var.environment
+  base_label         = "restaurant-svc-${var.environment}"
   availability_zones = ["us-east-1a", "us-east-1b"]
 }
 
@@ -15,15 +15,15 @@ module "restaurant_svc_ecr" {
 }
 
 module "api_gateway" {
-  source          = "../../../modules/api_gateway"
-  service         = var.service
-  region          = var.region
-  description     = "API Gateway for Restaurant Service"
-  environment     = var.environment
-  allowed_cidrs   = var.allowed_cidrs
-  vpc_id          = module.vpc.vpc_id
-  subnet_ids      = module.vpc.private_subnet_ids
-  api_name        = "restaurant-service"
+  source        = "../../../modules/api_gateway"
+  service       = var.service
+  region        = var.region
+  description   = "API Gateway for Restaurant Service"
+  environment   = var.environment
+  allowed_cidrs = var.allowed_cidrs
+  vpc_id        = module.vpc.vpc_id
+  subnet_ids    = module.vpc.private_subnet_ids
+  api_name      = "restaurant-service"
 
   openapi_spec_path = "${path.module}/tpl/restaurant_svc_openapi.yaml"
 
@@ -42,25 +42,25 @@ locals {
 }
 
 module "restaurant_svc_lambda" {
-  source             = "../../../modules/lambda"
-  vpc_id             = module.vpc.vpc_id
-  subnet_ids         = module.vpc.private_subnet_ids
-  service            = var.service
-  region             = var.region
-  environment        = var.environment
-  ecr_repository_url = module.restaurant_svc_ecr.repository_url
-  function_name      = "restaurant-svc"
-  parameter_prefix   = "/${var.service}/${var.environment}"
-  memory_size        = 128
-  timeout            = 29
+  source                    = "../../../modules/lambda"
+  vpc_id                    = module.vpc.vpc_id
+  subnet_ids                = module.vpc.private_subnet_ids
+  service                   = var.service
+  region                    = var.region
+  environment               = var.environment
+  ecr_repository_url        = module.restaurant_svc_ecr.repository_url
+  function_name             = "restaurant-svc"
+  parameter_prefix          = "/${var.service}/${var.environment}"
+  memory_size               = 128
+  timeout                   = 29
   api_gateway_execution_arn = module.api_gateway.execution_arn
-  image_tag          = module.api_parameters.parameter_values["image_version"]
-  
+  image_tag                 = module.api_parameters.parameter_values["image_version"]
+
   dynamodb_table_name = module.restaurants_table.table_name
   dynamodb_table_arn  = module.restaurants_table.table_arn
   audit_table_name    = module.audit_table.table_name
   audit_table_arn     = module.audit_table.table_arn
-  
+
   enable_dynamodb_access = true
 }
 
@@ -69,10 +69,10 @@ module "restaurants_table" {
   name       = "restaurants"
   base_label = "restaurant-svc-${var.environment}"
   hash_key   = "restaurantId"
-  
+
   vpc_id          = module.vpc.vpc_id
   route_table_ids = [module.vpc.private_route_table_id]
-  
+
   billing_mode = "PAY_PER_REQUEST"
   attributes = [
     {
@@ -103,19 +103,19 @@ module "restaurants_table" {
     }
   ]
 
-  stream_enabled    = true
-  stream_view_type  = "NEW_AND_OLD_IMAGES"
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
 }
 
 module "api_parameters" {
   source = "../../../modules/parameter_store"
-  
+
   environment = var.environment
   service     = "restaurant-svc"
 
   parameters = {
     image_version = {
-      value = "latest" 
+      value = "latest"
       type  = "String"
     }
   }
@@ -123,16 +123,16 @@ module "api_parameters" {
 
 module "audit_table" {
   source = "../../../modules/dynamodb"
-  
-  base_label = "${var.service}-${var.environment}"
-  name       = "audit-logs"
-  vpc_id     = module.vpc.vpc_id
+
+  base_label      = "${var.service}-${var.environment}"
+  name            = "audit-logs"
+  vpc_id          = module.vpc.vpc_id
   route_table_ids = [module.vpc.private_route_table_id]
-  
+
   billing_mode = "PAY_PER_REQUEST"
-  hash_key    = "requestId"
-  range_key   = "timestamp"
-  
+  hash_key     = "requestId"
+  range_key    = "timestamp"
+
   attributes = [
     {
       name = "requestId"
@@ -147,13 +147,13 @@ module "audit_table" {
       type = "S"
     }
   ]
-  
+
   global_secondary_indexes = [
     {
       name               = "DateIndex"
-      hash_key          = "date"
-      range_key         = "timestamp"
-      projection_type   = "ALL"
+      hash_key           = "date"
+      range_key          = "timestamp"
+      projection_type    = "ALL"
       non_key_attributes = null
     }
   ]

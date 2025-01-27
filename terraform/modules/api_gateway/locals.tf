@@ -15,7 +15,7 @@ locals {
         Resource  = "execute-api:/*"
         Condition = {
           IpAddress = {
-            "aws:SourceIp": var.allowed_cidrs
+            "aws:SourceIp" : var.allowed_cidrs
           }
         }
       },
@@ -26,7 +26,7 @@ locals {
         Resource  = "execute-api:/*"
         Condition = {
           NotIpAddress = {
-            "aws:SourceIp": var.allowed_cidrs
+            "aws:SourceIp" : var.allowed_cidrs
           }
         }
       }

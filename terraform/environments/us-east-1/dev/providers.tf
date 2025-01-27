@@ -5,7 +5,7 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
+
   backend "s3" {
     bucket         = "restaurant-svc-dev-terraform-state"
     key            = "environments/dev/ecr/terraform.tfstate"

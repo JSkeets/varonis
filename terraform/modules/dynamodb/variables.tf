@@ -1,54 +1,84 @@
 variable "name" {
   description = "Name of the DynamoDB table"
   type        = string
+
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9._-]+$", var.name))
+    error_message = "Table name must contain only alphanumeric characters, dots, hyphens, and underscores."
+  }
 }
 
 variable "base_label" {
-  description = "Base label for consistent naming convention"
+  description = "Base label for resource naming"
   type        = string
+
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.base_label))
+    error_message = "Base label must contain only lowercase letters, numbers, and hyphens."
+  }
 }
 
 variable "hash_key" {
-  description = "The attribute to use as the hash (partition) key"
+  description = "Hash key for the table"
   type        = string
 }
 
 variable "attributes" {
-  description = "List of nested attribute definitions. Only required for hash_key and range_key attributes"
+  description = "List of DynamoDB attributes"
   type = list(object({
     name = string
     type = string
   }))
+
+  validation {
+    condition     = alltrue([for attr in var.attributes : contains(["S", "N", "B"], attr.type)])
+    error_message = "Attribute type must be one of: S (string), N (number), or B (binary)."
+  }
 }
 
 variable "global_secondary_indexes" {
-  description = "List of global secondary indexes to create"
+  description = "List of global secondary indexes"
   type = list(object({
     name               = string
-    hash_key          = string
-    range_key         = optional(string)
-    projection_type   = string
-    non_key_attributes = optional(list(string))
+    hash_key           = string
+    range_key          = string
+    projection_type    = string
+    non_key_attributes = list(string)
   }))
   default = []
+
+  validation {
+    condition     = alltrue([for idx in var.global_secondary_indexes : contains(["ALL", "KEYS_ONLY", "INCLUDE"], idx.projection_type)])
+    error_message = "Projection type must be one of: ALL, KEYS_ONLY, or INCLUDE."
+  }
 }
 
 variable "billing_mode" {
-  description = "Controls how you are charged for read and write throughput. Valid values are PROVISIONED and PAY_PER_REQUEST"
+  description = "DynamoDB billing mode"
   type        = string
   default     = "PAY_PER_REQUEST"
+
+  validation {
+    condition     = contains(["PROVISIONED", "PAY_PER_REQUEST"], var.billing_mode)
+    error_message = "Billing mode must be either PROVISIONED or PAY_PER_REQUEST."
+  }
 }
 
 variable "stream_enabled" {
-  description = "Indicates whether Streams are to be enabled (true) or disabled (false)"
+  description = "Enable DynamoDB Streams"
   type        = bool
   default     = false
 }
 
 variable "stream_view_type" {
-  description = "When an item in the table is modified, StreamViewType determines what information is written to the table's stream"
+  description = "When stream is enabled, controls how much information is written to stream"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.stream_view_type == null ? true : contains(["NEW_IMAGE", "OLD_IMAGE", "NEW_AND_OLD_IMAGES", "KEYS_ONLY"], var.stream_view_type)
+    error_message = "Stream view type must be one of: NEW_IMAGE, OLD_IMAGE, NEW_AND_OLD_IMAGES, or KEYS_ONLY."
+  }
 }
 
 variable "vpc_id" {
@@ -62,7 +92,7 @@ variable "route_table_ids" {
 }
 
 variable "range_key" {
-  description = "The range key for the DynamoDB table"
+  description = "Range key for the table"
   type        = string
-  default     = null 
+  default     = null
 } 

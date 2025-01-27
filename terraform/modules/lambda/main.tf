@@ -2,7 +2,7 @@ resource "aws_security_group" "lambda" {
   name        = "${var.service}-${var.environment}-${var.function_name}-lambda"
   description = "Security group for Lambda function ${var.function_name}"
   vpc_id      = var.vpc_id
-  
+
   # Add egress rule to allow all outbound traffic
   egress {
     from_port   = 0
@@ -10,7 +10,7 @@ resource "aws_security_group" "lambda" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = {
     Name = "${var.service}-${var.environment}-${var.function_name}-lambda-sg"
   }
@@ -21,9 +21,9 @@ resource "aws_lambda_function" "this" {
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
 
-  image_uri    = "${var.ecr_repository_url}:${var.image_tag}"
-  memory_size  = var.memory_size
-  timeout      = var.timeout
+  image_uri   = "${var.ecr_repository_url}:${var.image_tag}"
+  memory_size = var.memory_size
+  timeout     = var.timeout
 
   vpc_config {
     subnet_ids         = var.subnet_ids
@@ -102,7 +102,7 @@ resource "aws_lambda_permission" "api_gw" {
 # Policy for restaurants table (read-only)
 resource "aws_iam_policy" "dynamodb_access" {
   count = var.enable_dynamodb_access ? 1 : 0
-  
+
   name = "${var.service}-${var.environment}-${var.function_name}-restaurants-read"
 
   policy = jsonencode({
@@ -121,10 +121,10 @@ resource "aws_iam_policy" "dynamodb_access" {
         ]
         Condition = {
           StringEquals = {
-            "aws:RequestedRegion": var.region
+            "aws:RequestedRegion" : var.region
           }
           Bool = {
-            "aws:SecureTransport": "true"
+            "aws:SecureTransport" : "true"
           }
         }
       }
@@ -149,10 +149,10 @@ resource "aws_iam_policy" "audit_access" {
         ]
         Condition = {
           StringEquals = {
-            "aws:RequestedRegion": var.region
+            "aws:RequestedRegion" : var.region
           }
           Bool = {
-            "aws:SecureTransport": "true"
+            "aws:SecureTransport" : "true"
           }
         }
       }
@@ -162,7 +162,7 @@ resource "aws_iam_policy" "audit_access" {
 
 resource "aws_iam_role_policy_attachment" "dynamodb_access" {
   count = var.enable_dynamodb_access ? 1 : 0
-  
+
   role       = aws_iam_role.lambda_exec.name
   policy_arn = aws_iam_policy.dynamodb_access[0].arn
 }
