@@ -27,6 +27,12 @@ resource "aws_lambda_function" "this" {
       DYNAMODB_TABLE_NAME = var.dynamodb_table_name
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      image_uri
+    ]
+  }
 }
 
 resource "aws_iam_role" "lambda_exec" {
