@@ -1,3 +1,19 @@
+module "cloudwatch" {
+  source = "../../../modules/cloudwatch"
+  
+  service            = var.service
+  environment        = var.environment
+  retention_in_days  = 30  
+  enable_alarms    = true
+  
+  alarm_email_endpoints = [
+    "jesseskeets@gmail.com",
+  ]
+  
+  api_error_threshold   = 5
+  lambda_error_threshold = 3
+}
+
 module "vpc" {
   source             = "../../../modules/vpc"
   name               = "restaurant"
@@ -5,6 +21,7 @@ module "vpc" {
   environment        = var.environment
   base_label         = "restaurant-svc-${var.environment}"
   availability_zones = ["us-east-1a", "us-east-1b"]
+  flow_log_group_arn = module.cloudwatch.vpc_flow_log_group_arn
 }
 
 module "restaurant_svc_ecr" {
@@ -24,6 +41,7 @@ module "api_gateway" {
   vpc_id        = module.vpc.vpc_id
   subnet_ids    = module.vpc.private_subnet_ids
   api_name      = "restaurant-service"
+  cloudwatch_log_group_arn = module.cloudwatch.api_gateway_log_group_arn
 
   openapi_spec_path = "${path.module}/tpl/restaurant_svc_openapi.yaml"
 

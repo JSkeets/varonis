@@ -52,3 +52,13 @@ variable "environment" {
     error_message = "Environment must be one of: dev, staging, prod."
   }
 }
+
+variable "flow_log_group_arn" {
+  description = "ARN of the CloudWatch Log Group for VPC Flow Logs"
+  type        = string
+
+  validation {
+    condition     = can(regex("^arn:aws:logs:", var.flow_log_group_arn))
+    error_message = "Flow log group ARN must be a valid CloudWatch Logs ARN."
+  }
+}
