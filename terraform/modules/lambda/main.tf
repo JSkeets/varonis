@@ -116,9 +116,35 @@ resource "aws_iam_policy" "dynamodb_access" {
   })
 }
 
-# Add SSM permissions to Lambda role
+
 resource "aws_iam_role_policy_attachment" "ssm_policy" {
   role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
+}
+
+resource "aws_iam_policy" "lambda_logging" {
+  name = "${var.service}-${var.environment}-${var.function_name}-logging"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = [
+          "arn:aws:logs:${var.region}:*:log-group:/aws/lambda/${aws_lambda_function.this.function_name}:*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_logs" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = aws_iam_policy.lambda_logging.arn
 }
 
