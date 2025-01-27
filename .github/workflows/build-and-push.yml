@@ -42,40 +42,42 @@ jobs:
       with:
         mask-password: true
 
-    - name: Build, push, and deploy
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-        IMAGE_TAG: ${{ github.sha }}
+    - name: Set up environment variables
+      id: env-setup
       run: |
-        cd api
-        REPO_NAME="restaurant-svc-${ENVIRONMENT}-restaurant-svc"
-        LAMBDA_FUNCTION_NAME="restaurant-${ENVIRONMENT}-restaurant-svc"
-        
-        # Check if image already exists
-        if ! aws ecr describe-images \
-          --repository-name $REPO_NAME \
-          --image-ids imageTag=$IMAGE_TAG 2>/dev/null; then
-          
-          echo "Image tag $IMAGE_TAG doesn't exist, building and pushing..."
-          docker build -t $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG
-          
-          # Update Parameter Store with new image version
-          aws ssm put-parameter \
-            --name "/restaurant-svc/${ENVIRONMENT}/image-version" \
-            --value "$IMAGE_TAG" \
-            --type "String" \
-            --overwrite
+        echo "REPO_NAME=restaurant-svc-${ENVIRONMENT}-restaurant-svc" >> $GITHUB_ENV
+        echo "LAMBDA_FUNCTION_NAME=restaurant-${ENVIRONMENT}-restaurant-svc" >> $GITHUB_ENV
+      env:
+        ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
 
-          echo "Updated Parameter Store with new image version: $IMAGE_TAG"
-          
-          # Update Lambda function with new image
-          aws lambda update-function-code \
-            --function-name $LAMBDA_FUNCTION_NAME \
-            --image-uri $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG
-
-          echo "Updated Lambda function with new image version: $IMAGE_TAG"
+    - name: Check existing image
+      id: check-image
+      run: |
+        if aws ecr describe-images \
+          --repository-name ${{ env.REPO_NAME }} \
+          --image-ids imageTag=${{ github.sha }} 2>/dev/null; then
+          echo "image_exists=true" >> $GITHUB_OUTPUT
         else
-          echo "Image tag $IMAGE_TAG already exists, skipping build and push"
-        fi 
+          echo "image_exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build and push Docker image
+      if: steps.check-image.outputs.image_exists == 'false'
+      working-directory: api
+      run: |
+        docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }} .
+        docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }}
+
+    - name: Update Parameter Store
+      run: |
+        aws ssm put-parameter \
+          --name "/restaurant-svc/${{ github.event.inputs.environment || 'dev' }}/image-version" \
+          --value "${{ github.sha }}" \
+          --type "String" \
+          --overwrite
+
+    - name: Update Lambda Function
+      run: |
+        aws lambda update-function-code \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --image-uri ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }} 
