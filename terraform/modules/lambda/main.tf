@@ -78,3 +78,42 @@ resource "aws_lambda_permission" "api_gw" {
   source_arn = "${var.api_gateway_execution_arn}/*/*"
 }
 
+resource "aws_iam_policy" "dynamodb_access" {
+  count = var.enable_dynamodb_access ? 1 : 0
+  
+  name = "${var.service}-${var.environment}-${var.function_name}-dynamodb"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = [
+          var.dynamodb_table_arn,
+          "${var.dynamodb_table_arn}/index/*"
+        ]
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion": var.region
+          }
+          Bool = {
+            "aws:SecureTransport": "true"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "dynamodb_access" {
+  count = var.enable_dynamodb_access ? 1 : 0
+  
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = aws_iam_policy.dynamodb_access[0].arn
+}
+

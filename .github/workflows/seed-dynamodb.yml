@@ -1,0 +1,50 @@
+name: Seed DynamoDB
+
+on:
+  push:
+    paths:
+      - 'data/restaurants.json'
+    branches:
+      - main
+
+jobs:
+  seed-dynamodb:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Convert and Seed DynamoDB
+      run: |
+        # Install jq for JSON processing
+        sudo apt-get install -y jq
+
+        # Get table name from environment
+        TABLE_NAME="restaurant-svc-dev-restaurants"
+        
+        # Convert JSON to DynamoDB format
+        jq -c '.restaurants[] | {
+          PutRequest: {
+            Item: {
+              restaurantId: { S: .restaurantId },
+              name: { S: .name },
+              style: { S: .style },
+              isVegetarian: { S: .isVegetarian },
+              openHour: { S: .openHour },
+              closeHour: { S: .closeHour },
+              address: { S: .address }
+            }
+          }
+        }' data/restaurants.json | jq -s '{
+          "'$TABLE_NAME'": .
+        }' > seed-data.json
+
+        # Seed DynamoDB
+        aws dynamodb batch-write-item --request-items file://seed-data.json 

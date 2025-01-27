@@ -1,0 +1,94 @@
+{
+    "restaurants": [
+        {
+            "restaurantId": "r1",
+            "name": "La Piazza",
+            "style": "Italian",
+            "isVegetarian": "false",
+            "openHour": "11:00",
+            "closeHour": "23:00",
+            "address": "123 Main St, New York, NY 10001"
+        },
+        {
+            "restaurantId": "r2",
+            "name": "Green Garden",
+            "style": "Italian",
+            "isVegetarian": "true",
+            "openHour": "10:00",
+            "closeHour": "22:00",
+            "address": "456 Park Ave, New York, NY 10002"
+        },
+        {
+            "restaurantId": "r3",
+            "name": "Seoul Kitchen",
+            "style": "Korean",
+            "isVegetarian": "false",
+            "openHour": "11:30",
+            "closeHour": "22:30",
+            "address": "789 5th Ave, New York, NY 10003"
+        },
+        {
+            "restaurantId": "r4",
+            "name": "Veggie Kingdom",
+            "style": "Korean",
+            "isVegetarian": "true",
+            "openHour": "12:00",
+            "closeHour": "21:00",
+            "address": "321 Broadway, New York, NY 10004"
+        },
+        {
+            "restaurantId": "r5",
+            "name": "Le Petit Bistro",
+            "style": "French",
+            "isVegetarian": "false",
+            "openHour": "17:00",
+            "closeHour": "23:30",
+            "address": "654 Madison Ave, New York, NY 10005"
+        },
+        {
+            "restaurantId": "r6",
+            "name": "Plant Base",
+            "style": "French",
+            "isVegetarian": "true",
+            "openHour": "11:00",
+            "closeHour": "22:00",
+            "address": "987 Lexington Ave, New York, NY 10006"
+        },
+        {
+            "restaurantId": "r7",
+            "name": "Sushi Master",
+            "style": "Japanese",
+            "isVegetarian": "false",
+            "openHour": "12:00",
+            "closeHour": "23:00",
+            "address": "147 3rd Ave, New York, NY 10007"
+        },
+        {
+            "restaurantId": "r8",
+            "name": "Zen Garden",
+            "style": "Japanese",
+            "isVegetarian": "true",
+            "openHour": "11:30",
+            "closeHour": "21:30",
+            "address": "258 7th Ave, New York, NY 10008"
+        },
+        {
+            "restaurantId": "r9",
+            "name": "Spice Route",
+            "style": "Indian",
+            "isVegetarian": "false",
+            "openHour": "11:00",
+            "closeHour": "22:30",
+            "address": "369 8th Ave, New York, NY 10009"
+        },
+        {
+            "restaurantId": "r10",
+            "name": "Vegan Curry House",
+            "style": "Indian",
+            "isVegetarian": "true",
+            "openHour": "12:00",
+            "closeHour": "22:00",
+            "address": "741 9th Ave, New York, NY 10010"
+        }
+    ]
+}

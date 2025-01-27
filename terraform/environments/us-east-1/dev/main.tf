@@ -48,6 +48,54 @@ module "restaurant_svc_lambda" {
   memory_size        = 128
   timeout            = 30
   api_gateway_execution_arn = module.api_gateway.execution_arn
+  
+  # DynamoDB configuration
+  enable_dynamodb_access = true
+  dynamodb_table_arn    = module.restaurants_table.table_arn
+  dynamodb_table_name   = module.restaurants_table.table_id
+  dynamodb_stream_arn   = module.restaurants_table.table_stream_arn
+}
+
+module "restaurants_table" {
+  source     = "../../../modules/dynamodb"
+  name       = "restaurants"
+  base_label = "restaurant-svc-${var.environment}"
+  hash_key   = "restaurantId"
+  
+  vpc_id          = module.vpc.vpc_id
+  route_table_ids = [module.vpc.private_route_table_id]
+  
+  attributes = [
+    {
+      name = "restaurantId"
+      type = "S"
+    },
+    {
+      name = "style"
+      type = "S"
+    },
+    {
+      name = "isVegetarian"
+      type = "S"
+    }
+  ]
+
+  global_secondary_indexes = [
+    {
+      name            = "StyleIndex"
+      hash_key        = "style"
+      projection_type = "ALL"
+    },
+    {
+      name            = "VegetarianIndex"
+      hash_key        = "isVegetarian"
+      range_key       = "style"
+      projection_type = "ALL"
+    }
+  ]
+
+  stream_enabled    = true
+  stream_view_type  = "NEW_AND_OLD_IMAGES"
 }
 
 
