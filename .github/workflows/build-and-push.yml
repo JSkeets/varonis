@@ -50,7 +50,7 @@ jobs:
       run: |
         cd api
         REPO_NAME="restaurant-svc-${ENVIRONMENT}-restaurant-svc"
-        LAMBDA_FUNCTION_NAME="restaurant-svc-${ENVIRONMENT}-restaurant-svc"
+        LAMBDA_FUNCTION_NAME="restaurant-${ENVIRONMENT}-restaurant-svc"
         
         # Check if image already exists
         if ! aws ecr describe-images \
