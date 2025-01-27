@@ -70,6 +70,7 @@ module "restaurants_table" {
   vpc_id          = module.vpc.vpc_id
   route_table_ids = [module.vpc.private_route_table_id]
   
+  billing_mode = "PAY_PER_REQUEST"
   attributes = [
     {
       name = "restaurantId"

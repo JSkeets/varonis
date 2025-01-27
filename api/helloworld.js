@@ -13,7 +13,10 @@ exports.handler = async (event, context) => {
         const params = {
             TableName: process.env.DYNAMODB_TABLE_NAME,
             IndexName: 'StyleIndex',
-            KeyConditionExpression: 'style = :style',
+            KeyConditionExpression: '#s = :style',
+            ExpressionAttributeNames: {
+                '#s': 'style'
+            },
             ExpressionAttributeValues: {
                 ':style': 'Italian'
             },
