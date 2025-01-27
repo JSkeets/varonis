@@ -48,12 +48,19 @@ exports.handler = async (event, context) => {
     const requestId = context.awsRequestId;
     const timestamp = new Date().toISOString();
     const date = timestamp.split('T')[0];
+    let body;
     
     console.log('Event:', JSON.stringify(event, null, 2));
     
     try {
+        // Safely extract headers
+        const headers = event.headers || {};
+        const userAgent = headers['User-Agent'] || headers['user-agent'] || 'Unknown';
+        const sourceIp = event.requestContext?.identity?.sourceIp || 'Unknown';
+        const httpMethod = event.httpMethod || 'Unknown';
+
         // Extract query from event body
-        const body = JSON.parse(event.body);
+        body = JSON.parse(event.body || '{}');
         const query = body.query;
         
         if (!query) {
@@ -120,9 +127,9 @@ exports.handler = async (event, context) => {
                 request: {
                     query: query,
                     parsedQuery: parsedQuery,
-                    userAgent: event.headers['User-Agent'],
-                    sourceIp: event.requestContext.identity.sourceIp,
-                    httpMethod: event.httpMethod
+                    userAgent: userAgent,
+                    sourceIp: sourceIp,
+                    httpMethod: httpMethod
                 },
                 response: {
                     statusCode: response.statusCode,
@@ -139,7 +146,7 @@ exports.handler = async (event, context) => {
     } catch (error) {
         console.error('Error:', error);
         
-        // Write error to audit table
+        // Write error to audit table with safe access to request data
         const errorAuditParams = {
             TableName: process.env.AUDIT_TABLE_NAME,
             Item: {
@@ -147,15 +154,15 @@ exports.handler = async (event, context) => {
                 timestamp: timestamp,
                 date: date,
                 request: {
-                    query: body?.query,
-                    userAgent: event.headers['User-Agent'],
-                    sourceIp: event.requestContext.identity.sourceIp,
-                    httpMethod: event.httpMethod
+                    query: body?.query || 'No query provided',
+                    userAgent: event.headers?.['User-Agent'] || event.headers?.['user-agent'] || 'Unknown',
+                    sourceIp: event.requestContext?.identity?.sourceIp || 'Unknown',
+                    httpMethod: event.httpMethod || 'Unknown'
                 },
                 error: {
-                    message: error.message,
-                    code: error.code,
-                    stack: error.stack
+                    message: error.message || 'Unknown error',
+                    code: error.code || 'Unknown code',
+                    stack: error.stack || 'No stack trace'
                 }
             }
         };
