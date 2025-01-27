@@ -53,7 +53,6 @@ exports.handler = async (event, context) => {
     console.log('Event:', JSON.stringify(event, null, 2));
     
     try {
-
         // Extract query from event body
         body = JSON.parse(event.body || '{}');
         const query = body.query;
@@ -105,17 +104,24 @@ exports.handler = async (event, context) => {
             }))
         };
 
+        console.log('About to write audit log with response:', JSON.stringify(responseBody, null, 2));
+
         // Write to audit table
-        await dynamodb.put({
+        const auditParams = {
             TableName: process.env.AUDIT_TABLE_NAME,
             Item: {
                 requestId: requestId,
                 timestamp: timestamp,
                 date: date,
                 query: query,
-                response: responseBody
+                response: responseBody,
+                restaurantsFound: restaurants.length
             }
-        }).promise();
+        };
+
+        console.log('Audit params:', JSON.stringify(auditParams, null, 2));
+        await dynamodb.put(auditParams).promise();
+        console.log('Audit log written successfully');
 
         return {
             statusCode: 200,
@@ -128,7 +134,7 @@ exports.handler = async (event, context) => {
         console.error('Error:', error);
         
         // Write error to audit table
-        await dynamodb.put({
+        const errorAuditParams = {
             TableName: process.env.AUDIT_TABLE_NAME,
             Item: {
                 requestId: requestId,
@@ -137,7 +143,11 @@ exports.handler = async (event, context) => {
                 query: body?.query || 'No query provided',
                 error: error.message || 'Unknown error'
             }
-        }).promise();
+        };
+
+        console.log('Error audit params:', JSON.stringify(errorAuditParams, null, 2));
+        await dynamodb.put(errorAuditParams).promise();
+        console.log('Error audit log written successfully');
 
         return {
             statusCode: error.statusCode || 500,
