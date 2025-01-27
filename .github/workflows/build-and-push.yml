@@ -42,7 +42,7 @@ jobs:
       with:
         mask-password: true
 
-    - name: Build and push Docker image
+    - name: Build, push, and deploy
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
@@ -50,6 +50,7 @@ jobs:
       run: |
         cd api
         REPO_NAME="restaurant-svc-${ENVIRONMENT}-restaurant-svc"
+        LAMBDA_FUNCTION_NAME="restaurant-svc-${ENVIRONMENT}-restaurant-svc"
         
         # Check if image already exists
         if ! aws ecr describe-images \
@@ -59,6 +60,22 @@ jobs:
           echo "Image tag $IMAGE_TAG doesn't exist, building and pushing..."
           docker build -t $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG
+          
+          # Update Parameter Store with new image version
+          aws ssm put-parameter \
+            --name "/restaurant-svc/${ENVIRONMENT}/image-version" \
+            --value "$IMAGE_TAG" \
+            --type "String" \
+            --overwrite
+
+          echo "Updated Parameter Store with new image version: $IMAGE_TAG"
+          
+          # Update Lambda function with new image
+          aws lambda update-function-code \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --image-uri $ECR_REGISTRY/$REPO_NAME:$IMAGE_TAG
+
+          echo "Updated Lambda function with new image version: $IMAGE_TAG"
         else
           echo "Image tag $IMAGE_TAG already exists, skipping build and push"
         fi 

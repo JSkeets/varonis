@@ -23,12 +23,6 @@ variable "ecr_repository_url" {
   type        = string
 }
 
-variable "image_tag" {
-  description = "Tag of the container image"
-  type        = string
-  default     = "latest"
-}
-
 variable "memory_size" {
   description = "Amount of memory in MB for the Lambda function"
   type        = number
@@ -78,4 +72,14 @@ variable "dynamodb_stream_arn" {
   description = "ARN of the DynamoDB stream"
   type        = string
   default     = null
+}
+
+variable "parameter_prefix" {
+  description = "Prefix for SSM Parameter Store parameters"
+  type        = string
+}
+
+variable "image_tag" {
+  description = "The tag of the container image to deploy"
+  type        = string
 }

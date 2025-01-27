@@ -35,6 +35,10 @@ module "api_gateway" {
   }
 }
 
+locals {
+  timestamp = formatdate("YYYYMMDD-HHmmss", timestamp())
+}
+
 module "restaurant_svc_lambda" {
   source             = "../../../modules/lambda"
   vpc_id             = module.vpc.vpc_id
@@ -44,10 +48,11 @@ module "restaurant_svc_lambda" {
   environment        = var.environment
   ecr_repository_url = module.restaurant_svc_ecr.repository_url
   function_name      = "restaurant-svc"
-  image_tag          = "latest"
+  parameter_prefix   = "/${var.service}/${var.environment}"
   memory_size        = 128
   timeout            = 30
   api_gateway_execution_arn = module.api_gateway.execution_arn
+  image_tag          = module.api_parameters.parameter_values["image_version"]
   
   # DynamoDB configuration
   enable_dynamodb_access = true
@@ -97,5 +102,21 @@ module "restaurants_table" {
   stream_enabled    = true
   stream_view_type  = "NEW_AND_OLD_IMAGES"
 }
+
+module "api_parameters" {
+  source = "../../../modules/parameter_store"
+  
+  environment = var.environment
+  service     = "restaurant-svc"
+
+  parameters = {
+    image_version = {
+      value = "latest" 
+      type  = "String"
+    }
+  }
+}
+
+
 
 

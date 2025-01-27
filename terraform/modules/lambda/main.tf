@@ -116,3 +116,9 @@ resource "aws_iam_policy" "dynamodb_access" {
   })
 }
 
+# Add SSM permissions to Lambda role
+resource "aws_iam_role_policy_attachment" "ssm_policy" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
+}
+
