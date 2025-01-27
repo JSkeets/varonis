@@ -116,10 +116,37 @@ resource "aws_iam_policy" "dynamodb_access" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "dynamodb_access" {
+  count = var.enable_dynamodb_access ? 1 : 0
+  
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = aws_iam_policy.dynamodb_access[0].arn
+}
+
+resource "aws_iam_policy" "ssm_policy" {
+  name = "${var.service}-${var.environment}-${var.function_name}-ssm"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = [
+          "*"
+        ]
+      }
+    ]
+  })
+}
 
 resource "aws_iam_role_policy_attachment" "ssm_policy" {
   role       = aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
+  policy_arn = aws_iam_policy.ssm_policy.arn
 }
 
 resource "aws_iam_policy" "lambda_logging" {
