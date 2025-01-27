@@ -18,16 +18,6 @@ variable "region" {
   description = "The AWS region"
 }
 
-variable "vpc_name" {
-  type        = string
-  description = "The name of the VPC"
-}
-
-variable "subnet_tag_tier" {
-  type        = string
-  description = "The tag tier of the subnets (Private or Public)"
-}
-
 variable "integrations" {
   type = map(object({
     uri         = string
@@ -51,4 +41,14 @@ variable "allowed_cidrs" {
 variable "api_name" {
   type        = string
   description = "The name of the API"
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for the API Gateway VPC endpoint"
+  type        = list(string)
 }

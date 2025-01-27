@@ -38,17 +38,17 @@ variable "ecr_repository_url" {
   description = "The URL of the ECR repository"
 }
 
-variable "vpc_name" {
-  type        = string
-  description = "The name of the VPC"
-}
-
-variable "subnet_tag_tier" {
-  type        = string
-  description = "The tag tier of the subnets (Private or Public)"
-}
-
 variable "api_gateway_execution_arn" {
   description = "The execution ARN of the API Gateway"
   type        = string
+}
+
+variable "vpc_id" {
+  description = "ID of the VPC"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for the Lambda function"
+  type        = list(string)
 }

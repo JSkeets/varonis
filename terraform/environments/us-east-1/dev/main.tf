@@ -1,3 +1,10 @@
+module "vpc" {
+  source = "../../../modules/vpc"
+  name   = "restaurant"
+  base_label = "restaurant-svc-${var.environment}"
+  availability_zones = ["us-east-1a", "us-east-1b"]
+}
+
 module "restaurant_svc_ecr" {
   source          = "../../../modules/ecr"
   service         = "restaurant-svc"
@@ -12,10 +19,9 @@ module "api_gateway" {
   description     = "API Gateway for Restaurant Service"
   environment     = var.environment
   allowed_cidrs   = var.allowed_cidrs
-  subnet_tag_tier = "Private"
-
-  vpc_name = var.vpc_name
-  api_name = "restaurant-service"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnet_ids
+  api_name        = "restaurant-service"
 
   openapi_spec_path = "${path.module}/tpl/restaurant_svc_openapi.yaml"
 
@@ -31,7 +37,8 @@ module "api_gateway" {
 
 module "restaurant_svc_lambda" {
   source             = "../../../modules/lambda"
-  vpc_name           = var.vpc_name
+  vpc_id             = module.vpc.vpc_id
+  subnet_ids         = module.vpc.private_subnet_ids
   service            = var.service
   region             = var.region
   environment        = var.environment
@@ -39,7 +46,6 @@ module "restaurant_svc_lambda" {
   function_name      = "restaurant-svc"
   image_tag          = "latest"
   memory_size        = 128
-  subnet_tag_tier    = "Private"
   timeout            = 30
   api_gateway_execution_arn = module.api_gateway.execution_arn
 }

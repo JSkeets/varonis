@@ -1,10 +1,10 @@
 resource "aws_vpc_endpoint" "api_gateway" {
-  vpc_id              = data.aws_vpc.selected.id
+  vpc_id              = var.vpc_id
   service_name        = "com.amazonaws.${var.region}.execute-api"
   vpc_endpoint_type   = "Interface"
   private_dns_enabled = true
 
-  subnet_ids = data.aws_subnets.private.ids
+  subnet_ids = var.subnet_ids
 
   security_group_ids = [aws_security_group.api_gateway_endpoint.id]
 
@@ -16,13 +16,13 @@ resource "aws_vpc_endpoint" "api_gateway" {
 resource "aws_security_group" "api_gateway_endpoint" {
   name        = "${var.service}-${var.environment}-api-gateway-endpoint"
   description = "Security group for API Gateway VPC endpoint"
-  vpc_id      = data.aws_vpc.selected.id
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.selected.cidr_block]
+    cidr_blocks = var.allowed_cidrs
   }
 
   tags = {
@@ -41,7 +41,6 @@ resource "aws_api_gateway_rest_api" "this" {
 
   policy = local.resource_policy
 }
-
 
 resource "aws_api_gateway_deployment" "this" {
   depends_on  = [aws_api_gateway_rest_api.this]

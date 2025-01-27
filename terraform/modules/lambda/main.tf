@@ -1,7 +1,7 @@
 resource "aws_security_group" "lambda" {
   name        = "${var.service}-${var.environment}-${var.function_name}-lambda"
   description = "Security group for Lambda function ${var.function_name}"
-  vpc_id      = data.aws_vpc.selected.id
+  vpc_id      = var.vpc_id
   
   tags = {
     Name = "${var.service}-${var.environment}-${var.function_name}-lambda-sg"
@@ -13,12 +13,12 @@ resource "aws_lambda_function" "this" {
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
 
-  image_uri   = "${var.ecr_repository_url}:${var.image_tag}"
-  memory_size = var.memory_size
-  timeout     = var.timeout
+  image_uri    = "${var.ecr_repository_url}:${var.image_tag}"
+  memory_size  = var.memory_size
+  timeout      = var.timeout
 
   vpc_config {
-    subnet_ids         = data.aws_subnets.private.ids
+    subnet_ids         = var.subnet_ids
     security_group_ids = [aws_security_group.lambda.id]
   }
 }
