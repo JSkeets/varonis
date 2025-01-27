@@ -3,6 +3,14 @@ resource "aws_security_group" "lambda" {
   description = "Security group for Lambda function ${var.function_name}"
   vpc_id      = var.vpc_id
   
+  # Add egress rule to allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
   tags = {
     Name = "${var.service}-${var.environment}-${var.function_name}-lambda-sg"
   }
