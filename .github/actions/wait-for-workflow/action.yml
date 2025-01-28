@@ -13,6 +13,9 @@ inputs:
     description: 'Maximum time to wait in minutes'
     required: false
     default: '30'
+  run_id:
+    description: 'The specific workflow run ID to wait for'
+    required: true
 
 runs:
   using: 'composite'
@@ -22,36 +25,32 @@ runs:
       with:
         script: |
           const workflowFileName = '${{ inputs.workflow_id }}';
+          const runId = '${{ inputs.run_id }}';
           const timeoutMinutes = parseInt('${{ inputs.timeout }}');
           const intervalSeconds = 10;
           
-          console.log(`Looking for workflow file: ${workflowFileName}`);
+          console.log(`Looking for workflow run ID: ${runId}`);
           
           let endTime = Date.now() + timeoutMinutes * 60 * 1000;
           let status = 'in_progress';
           
           while (Date.now() < endTime) {
-            const runs = await github.rest.actions.listWorkflowRuns({
+            const run = await github.rest.actions.getWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              workflow_id: workflowFileName,
-              branch: '${{ inputs.branch }}',
-              per_page: 1
+              run_id: runId
             });
             
-            if (runs.data.workflow_runs.length > 0) {
-              const run = runs.data.workflow_runs[0];
-              status = run.status;
-              
-              console.log(`Workflow run status: ${status}`);
-              if (status === 'completed') {
-                console.log(`Workflow conclusion: ${run.conclusion}`);
-                if (run.conclusion === 'success') {
-                  console.log('Workflow completed successfully!');
-                  break;
-                } else {
-                  throw new Error(`Workflow failed: ${run.conclusion}`);
-                }
+            status = run.data.status;
+            console.log(`Workflow run status: ${status}`);
+            
+            if (status === 'completed') {
+              console.log(`Workflow conclusion: ${run.data.conclusion}`);
+              if (run.data.conclusion === 'success') {
+                console.log('Workflow completed successfully!');
+                break;
+              } else {
+                throw new Error(`Workflow failed: ${run.data.conclusion}`);
               }
             }
             

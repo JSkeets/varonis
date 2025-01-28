@@ -26,6 +26,7 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Bootstrap Infrastructure
+      id: bootstrap
       uses: actions/github-script@v6
       with:
         script: |
@@ -36,14 +37,32 @@ jobs:
             ref: 'main',
             inputs: { environment: context.payload.inputs.environment }
           });
+          
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          const runs = await github.rest.actions.listWorkflowRuns({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'infrastructure-bootstrap.yml',
+            branch: 'main',
+            per_page: 1
+          });
+          
+          if (runs.data.workflow_runs.length === 0) {
+            throw new Error('Could not find workflow run');
+          }
+          
+          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
 
     - name: Wait for Bootstrap
       uses: ./.github/actions/wait-for-workflow
       with:
         workflow_id: 'infrastructure-bootstrap.yml'
         branch: 'main'
+        run_id: ${{ steps.bootstrap.outputs.run_id }}
 
     - name: Build and Push
+      id: build
       uses: actions/github-script@v6
       with:
         script: |
@@ -54,14 +73,32 @@ jobs:
             ref: 'main',
             inputs: { environment: context.payload.inputs.environment }
           });
+          
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          const runs = await github.rest.actions.listWorkflowRuns({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'build-and-push.yml',
+            branch: 'main',
+            per_page: 1
+          });
+          
+          if (runs.data.workflow_runs.length === 0) {
+            throw new Error('Could not find workflow run');
+          }
+          
+          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
 
     - name: Wait for Build
       uses: ./.github/actions/wait-for-workflow
       with:
         workflow_id: 'build-and-push.yml'
         branch: 'main'
+        run_id: ${{ steps.build.outputs.run_id }}
 
     - name: Apply Terraform
+      id: terraform
       uses: actions/github-script@v6
       with:
         script: |
@@ -72,14 +109,32 @@ jobs:
             ref: 'main',
             inputs: { environment: context.payload.inputs.environment }
           });
+          
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          const runs = await github.rest.actions.listWorkflowRuns({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'terraform-apply.yml',
+            branch: 'main',
+            per_page: 1
+          });
+          
+          if (runs.data.workflow_runs.length === 0) {
+            throw new Error('Could not find workflow run');
+          }
+          
+          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
 
     - name: Wait for Terraform
       uses: ./.github/actions/wait-for-workflow
       with:
         workflow_id: 'terraform-apply.yml'
         branch: 'main'
+        run_id: ${{ steps.terraform.outputs.run_id }}
 
     - name: Seed DynamoDB
+      id: seed
       uses: actions/github-script@v6
       with:
         script: |
@@ -90,12 +145,29 @@ jobs:
             ref: 'main',
             inputs: { environment: context.payload.inputs.environment }
           });
+          
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          const runs = await github.rest.actions.listWorkflowRuns({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'seed-dynamodb.yml',
+            branch: 'main',
+            per_page: 1
+          });
+          
+          if (runs.data.workflow_runs.length === 0) {
+            throw new Error('Could not find workflow run');
+          }
+          
+          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
 
     - name: Wait for Seed
       uses: ./.github/actions/wait-for-workflow
       with:
         workflow_id: 'seed-dynamodb.yml'
         branch: 'main'
+        run_id: ${{ steps.seed.outputs.run_id }}
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v2
@@ -105,6 +177,7 @@ jobs:
         aws-region: us-east-1
 
     - name: Deploy API
+      id: deploy
       uses: actions/github-script@v6
       with:
         script: |
@@ -118,12 +191,29 @@ jobs:
               image_tag: context.sha
             }
           });
+          
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          const runs = await github.rest.actions.listWorkflowRuns({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-api.yml',
+            branch: 'main',
+            per_page: 1
+          });
+          
+          if (runs.data.workflow_runs.length === 0) {
+            throw new Error('Could not find workflow run');
+          }
+          
+          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
 
     - name: Wait for Deploy
       uses: ./.github/actions/wait-for-workflow
       with:
         workflow_id: 'deploy-api.yml'
         branch: 'main'
+        run_id: ${{ steps.deploy.outputs.run_id }}
 
     - name: Get API Gateway URL
       run: |
