@@ -62,15 +62,15 @@ jobs:
         aws lambda wait function-updated --function-name restaurant-${{ github.event.inputs.environment }}-restaurant-svc
         
         # Get current version and print it for debugging
-        CURRENT_VERSION=$(aws lambda get-function --function-name restaurant-${{ github.event.inputs.environment }}-restaurant-svc --query 'Configuration.ImageConfigResponse.ImageUri' --output text)
+        CURRENT_VERSION=$(aws lambda get-function --function-name restaurant-${{ github.event.inputs.environment }}-restaurant-svc --query 'Code.ImageUri' --output text)
         echo "Current Lambda version: $CURRENT_VERSION"
         echo "Expected image tag: ${{ github.event.inputs.image_tag }}"
         
         # Check if the image tag is in the current version
         if [[ $CURRENT_VERSION == *"${{ github.event.inputs.image_tag }}"* ]]; then
-          echo "✅ Deployment verified successfully"
+          echo " Deployment verified successfully"
         else
-          echo "❌ Deployment verification failed: Version mismatch"
+          echo "Deployment verification failed: Version mismatch"
           echo "Current version: $CURRENT_VERSION"
           echo "Expected to contain: ${{ github.event.inputs.image_tag }}"
           exit 1
@@ -79,9 +79,9 @@ jobs:
     - name: Notify Success
       if: success()
       run: |
-        echo "✅ API deployment to ${{ github.event.inputs.environment }} completed successfully!"
+        echo "API deployment to ${{ github.event.inputs.environment }} completed successfully!"
 
     - name: Notify Failure
       if: failure()
       run: |
-        echo "❌ API deployment to ${{ github.event.inputs.environment }} failed!" 
+        echo "API deployment to ${{ github.event.inputs.environment }} failed!" 
