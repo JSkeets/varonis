@@ -72,6 +72,10 @@ jobs:
             --tags Key=Environment,Value=${{ github.event.inputs.environment }} \
             --region us-east-1
 
+          echo "Waiting for DynamoDB table to be active..."
+          aws dynamodb wait table-exists \
+            --table-name restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock
+
           # Enable point-in-time recovery
           aws dynamodb update-continuous-backups \
             --table-name restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock \

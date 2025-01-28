@@ -55,12 +55,16 @@ jobs:
               const status = runs.data.workflow_runs[0].conclusion;
               console.log(`Infrastructure Bootstrap status: ${status}`);
               
-              if (status === 'success') {
+              if (status === null) {
+                console.log('Workflow still running...');
+              } else if (status === 'success') {
                 completed = true;
               } else if (status === 'failure' || status === 'cancelled') {
                 core.setFailed(`Infrastructure Bootstrap failed with status: ${status}`);
                 return;
               }
+            } else {
+              console.log('No workflow runs found yet, waiting...');
             }
             
             if (!completed) {
@@ -106,12 +110,16 @@ jobs:
               const status = runs.data.workflow_runs[0].conclusion;
               console.log(`Build and Push status: ${status}`);
               
-              if (status === 'success') {
+              if (status === null) {
+                console.log('Workflow still running...');
+              } else if (status === 'success') {
                 completed = true;
               } else if (status === 'failure' || status === 'cancelled') {
                 core.setFailed(`Build and Push failed with status: ${status}`);
                 return;
               }
+            } else {
+              console.log('No workflow runs found yet, waiting...');
             }
             
             if (!completed) {
@@ -157,12 +165,16 @@ jobs:
               const status = runs.data.workflow_runs[0].conclusion;
               console.log(`Terraform Apply status: ${status}`);
               
-              if (status === 'success') {
+              if (status === null) {
+                console.log('Workflow still running...');
+              } else if (status === 'success') {
                 completed = true;
               } else if (status === 'failure' || status === 'cancelled') {
                 core.setFailed(`Terraform Apply failed with status: ${status}`);
                 return;
               }
+            } else {
+              console.log('No workflow runs found yet, waiting...');
             }
             
             if (!completed) {
@@ -208,12 +220,16 @@ jobs:
               const status = runs.data.workflow_runs[0].conclusion;
               console.log(`DynamoDB Seed status: ${status}`);
               
-              if (status === 'success') {
+              if (status === null) {
+                console.log('Workflow still running...');
+              } else if (status === 'success') {
                 completed = true;
               } else if (status === 'failure' || status === 'cancelled') {
                 core.setFailed(`DynamoDB Seed failed with status: ${status}`);
                 return;
               }
+            } else {
+              console.log('No workflow runs found yet, waiting...');
             }
             
             if (!completed) {
@@ -269,6 +285,42 @@ jobs:
       if: failure()
       run: |
         echo "❌ Master deployment to ${{ github.event.inputs.environment }} failed!"
+
+    - name: Wait for API Deploy
+      uses: actions/github-script@v6
+      with:
+        script: |
+          let completed = false;
+          while (!completed) {
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'deploy-api.yml',
+              branch: 'main',
+              per_page: 1
+            });
+            
+            if (runs.data.workflow_runs.length) {
+              const status = runs.data.workflow_runs[0].conclusion;
+              console.log(`API Deploy status: ${status}`);
+              
+              if (status === null) {
+                console.log('Workflow still running...');
+              } else if (status === 'success') {
+                completed = true;
+              } else if (status === 'failure' || status === 'cancelled') {
+                core.setFailed(`API Deploy failed with status: ${status}`);
+                return;
+              }
+            } else {
+              console.log('No workflow runs found yet, waiting...');
+            }
+            
+            if (!completed) {
+              console.log('Waiting for API Deploy to complete...');
+              await new Promise(resolve => setTimeout(resolve, 10000));
+            }
+          }
 
   check-status:
     needs: [bootstrap, build, terraform, seed, deploy-api]
