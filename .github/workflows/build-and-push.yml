@@ -48,6 +48,7 @@ jobs:
         echo "REPO_NAME=restaurant-svc-${ENVIRONMENT}-restaurant-svc" >> $GITHUB_ENV
         echo "LAMBDA_FUNCTION_NAME=restaurant-${ENVIRONMENT}-restaurant-svc" >> $GITHUB_ENV
       env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
 
     - name: Check existing image
@@ -67,17 +68,3 @@ jobs:
       run: |
         docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }} .
         docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }}
-
-    - name: Update Parameter Store
-      run: |
-        aws ssm put-parameter \
-          --name "/restaurant-svc/${{ github.event.inputs.environment || 'dev' }}/image-version" \
-          --value "${{ github.sha }}" \
-          --type "String" \
-          --overwrite
-
-    - name: Update Lambda Function
-      run: |
-        aws lambda update-function-code \
-          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
-          --image-uri ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }} 

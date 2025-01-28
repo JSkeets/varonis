@@ -1,0 +1,157 @@
+name: Master Deploy Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Trigger Infrastructure Bootstrap
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'infrastructure-bootstrap.yml',
+            ref: 'main',
+            inputs: {
+              environment: '${{ github.event.inputs.environment }}'
+            }
+          })
+
+    - name: Wait for Bootstrap
+      run: sleep 30
+
+    - name: Trigger Build and Push
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'build-and-push.yml',
+            ref: 'main',
+            inputs: {
+              environment: '${{ github.event.inputs.environment }}'
+            }
+          })
+
+    - name: Wait for Build
+      run: sleep 30
+
+    - name: Trigger Terraform Deploy
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'terraform-deploy.yml',
+            ref: 'main',
+            inputs: {
+              environment: '${{ github.event.inputs.environment }}'
+            }
+          })
+
+    - name: Wait for Terraform
+      run: sleep 30
+
+    - name: Trigger DynamoDB Seed
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'seed-dynamodb.yml',
+            ref: 'main',
+            inputs: {
+              environment: '${{ github.event.inputs.environment }}'
+            }
+          })
+
+    - name: Wait for Seed
+      run: sleep 30
+
+    - name: Deploy API
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-api.yml',
+            ref: 'main',
+            inputs: {
+              environment: '${{ github.event.inputs.environment }}',
+              image_tag: '${{ github.sha }}'
+            }
+          })
+
+    - name: Get API Gateway URL
+      run: |
+        cd terraform/environments/us-east-1/${{ github.event.inputs.environment }}
+        API_URL=$(terraform output -raw api_gateway_url)
+        echo "API_URL=$API_URL" >> $GITHUB_ENV
+
+    - name: Check Workflow Status
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const workflows = [
+            'infrastructure-bootstrap.yml',
+            'build-and-push.yml',
+            'terraform-deploy.yml',
+            'seed-dynamodb.yml',
+            'deploy-api.yml'
+          ];
+          
+          for (const workflow of workflows) {
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflow,
+              branch: 'main',
+              per_page: 1
+            });
+            
+            if (runs.data.workflow_runs[0].conclusion !== 'success') {
+              core.setFailed(`Workflow ${workflow} failed or is still running`);
+            }
+          }
+
+    - name: Notify Success
+      if: success()
+      run: |
+        echo "✅ Master deployment to ${{ github.event.inputs.environment }} completed successfully!"
+        echo "API Gateway URL: ${{ env.API_URL }}"
+        echo "Example curl command:"
+        echo "curl -X POST ${{ env.API_URL }}/restaurant/query -H 'Content-Type: application/json' -d '{\"query\": \"test query\"}'"
+
+    - name: Notify Failure
+      if: failure()
+      run: |
+        echo "❌ Master deployment to ${{ github.event.inputs.environment }} failed!" 

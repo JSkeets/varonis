@@ -1,0 +1,99 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'api/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'api/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event_name == 'push' && 'dev' || 'pr' }}
+    
+    steps:
+    - name: Trigger Build and Push
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'build-and-push.yml',
+            ref: 'main',
+            inputs: {
+              environment: '${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event_name == 'push' && 'dev' || 'pr' }}'
+            }
+          })
+
+    - name: Wait for Build
+      run: sleep 30
+
+    - name: Deploy API
+      if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy-api.yml',
+            ref: 'main',
+            inputs: {
+              environment: '${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}',
+              image_tag: '${{ github.sha }}'
+            }
+          })
+
+    - name: Check Workflow Status
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const workflows = ['build-and-push.yml'];
+          if ('${{ github.event_name }}' === 'push' || '${{ github.event_name }}' === 'workflow_dispatch') {
+            workflows.push('deploy-api.yml');
+          }
+          
+          for (const workflow of workflows) {
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflow,
+              branch: 'main',
+              per_page: 1
+            });
+            
+            if (runs.data.workflow_runs[0].conclusion !== 'success') {
+              core.setFailed(`Workflow ${workflow} failed or is still running`);
+            }
+          }
+
+    - name: Notify Success
+      if: success()
+      run: |
+        echo "✅ CI/CD pipeline completed successfully!"
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "Image deployed to ${{ inputs.environment }} environment"
+        elif [[ "${{ github.event_name }}" == "push" ]]; then
+          echo "Image deployed to dev environment"
+        fi
+
+    - name: Notify Failure
+      if: failure()
+      run: |
+        echo "❌ CI/CD pipeline failed!" 
