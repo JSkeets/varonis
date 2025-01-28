@@ -62,9 +62,16 @@ jobs:
           echo "image_exists=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Build and push Docker image
+    - name: Build and Push Docker Image
       if: steps.check-image.outputs.image_exists == 'false'
       working-directory: api
       run: |
+        # Build the image
         docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }} .
+        
+        # Tag with both SHA and latest
+        docker tag ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:latest
+        
+        # Push both tags
         docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:${{ github.sha }}
+        docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPO_NAME }}:latest
