@@ -12,4 +12,5 @@
 - I would also never host any production code in a public github, for ease of sharing my solution I have done so, but just want to be explicit about this.
 
 # To deploy
-- Run the `master-deploy` workflow, this will create the terraform state resource (S3 and dynamodb), bootstrap the infrastructure, push a container to the registry, apply the terraform, seed the dynamoDB, and deploy the api. 
+- Run the `master-deploy` workflow, this will create the terraform state resource (S3 and dynamodb), bootstrap the infrastructure, push a container to the registry, apply the terraform, seed the dynamoDB, and deploy the api.
+- To query the API, you can use the following command: `curl -X POST https://your-api-gateway-url/restaurant/query -H "Content-Type: application/json" -d '{"query": "All Italian restaurants"}'`
