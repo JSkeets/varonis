@@ -31,18 +31,18 @@ provider "aws" {
 
 module "cloudwatch" {
   source = "../../../modules/cloudwatch"
-  
-  service            = var.service
-  environment        = var.environment
-  retention_in_days  = 90  
-  enable_alarms      = true
-  
+
+  service           = var.service
+  environment       = var.environment
+  retention_in_days = 90
+  enable_alarms     = true
+
   alarm_email_endpoints = [
     "jesseskeets@gmail.com",
   ]
-  
-  api_error_threshold    = 3    
-  lambda_error_threshold = 2  
+
+  api_error_threshold    = 3
+  lambda_error_threshold = 2
 }
 
 module "vpc" {
@@ -51,7 +51,7 @@ module "vpc" {
   service            = "restaurant-svc"
   environment        = var.environment
   base_label         = "restaurant-svc-${var.environment}"
-  availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]  # Three AZs for prod
+  availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"] # Three AZs for prod
   flow_log_group_arn = module.cloudwatch.vpc_flow_log_group_arn
 }
 
@@ -63,15 +63,15 @@ module "restaurant_svc_ecr" {
 }
 
 module "api_gateway" {
-  source        = "../../../modules/api_gateway"
-  service       = var.service
-  region        = var.region
-  description   = "API Gateway for Restaurant Service"
-  environment   = var.environment
-  allowed_cidrs = var.allowed_cidrs
-  vpc_id        = module.vpc.vpc_id
-  subnet_ids    = module.vpc.private_subnet_ids
-  api_name      = "restaurant-service"
+  source                   = "../../../modules/api_gateway"
+  service                  = var.service
+  region                   = var.region
+  description              = "API Gateway for Restaurant Service"
+  environment              = var.environment
+  allowed_cidrs            = var.allowed_cidrs
+  vpc_id                   = module.vpc.vpc_id
+  subnet_ids               = module.vpc.private_subnet_ids
+  api_name                 = "restaurant-service"
   cloudwatch_log_group_arn = module.cloudwatch.api_gateway_log_group_arn
 
   openapi_spec_path = "${path.module}/tpl/restaurant_svc_openapi.yaml"
@@ -81,7 +81,7 @@ module "api_gateway" {
       uri         = module.restaurant_svc_lambda.invoke_arn
       type        = "AWS_PROXY"
       http_method = "POST"
-      timeout_ms  = 29000  # Increased timeout for prod
+      timeout_ms  = 29000 # Increased timeout for prod
     }
   }
 }
@@ -107,7 +107,7 @@ module "restaurant_svc_lambda" {
   ecr_repository_url        = module.restaurant_svc_ecr.repository_url
   function_name             = "restaurant-${var.environment}-restaurant-svc"
   parameter_prefix          = "/${var.service}/${var.environment}"
-  memory_size               = 256  # More memory for prod
+  memory_size               = 256 # More memory for prod
   timeout                   = 29
   api_gateway_execution_arn = module.api_gateway.execution_arn
   image_tag                 = module.api_parameters.parameter_values["image_version"]
@@ -130,7 +130,7 @@ module "restaurants_table" {
   vpc_id          = module.vpc.vpc_id
   route_table_ids = [module.vpc.private_route_table_id]
 
-  billing_mode = "PROVISIONED"  # Switch to provisioned for prod
+  billing_mode = "PROVISIONED" # Switch to provisioned for prod
 
 
   attributes = [

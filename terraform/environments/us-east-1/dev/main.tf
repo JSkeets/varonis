@@ -1,16 +1,16 @@
 module "cloudwatch" {
   source = "../../../modules/cloudwatch"
-  
-  service            = var.service
-  environment        = var.environment
-  retention_in_days  = 30  
-  enable_alarms    = true
-  
+
+  service           = var.service
+  environment       = var.environment
+  retention_in_days = 30
+  enable_alarms     = true
+
   alarm_email_endpoints = [
     "jesseskeets@gmail.com",
   ]
-  
-  api_error_threshold   = 5
+
+  api_error_threshold    = 5
   lambda_error_threshold = 3
 }
 
@@ -32,15 +32,15 @@ module "restaurant_svc_ecr" {
 }
 
 module "api_gateway" {
-  source        = "../../../modules/api_gateway"
-  service       = var.service
-  region        = var.region
-  description   = "API Gateway for Restaurant Service"
-  environment   = var.environment
-  allowed_cidrs = var.allowed_cidrs
-  vpc_id        = module.vpc.vpc_id
-  subnet_ids    = module.vpc.private_subnet_ids
-  api_name      = "restaurant-service"
+  source                   = "../../../modules/api_gateway"
+  service                  = var.service
+  region                   = var.region
+  description              = "API Gateway for Restaurant Service"
+  environment              = var.environment
+  allowed_cidrs            = var.allowed_cidrs
+  vpc_id                   = module.vpc.vpc_id
+  subnet_ids               = module.vpc.private_subnet_ids
+  api_name                 = "restaurant-service"
   cloudwatch_log_group_arn = module.cloudwatch.api_gateway_log_group_arn
 
   openapi_spec_path = "${path.module}/tpl/restaurant_svc_openapi.yaml"

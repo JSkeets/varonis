@@ -93,8 +93,8 @@ jobs:
 
     - name: Notify Success
       if: success()
-      run: echo "✅ Infrastructure bootstrap completed successfully!"
+      run: echo "Infrastructure bootstrap completed successfully!"
 
     - name: Notify Failure
       if: failure()
-      run: echo "❌ Infrastructure bootstrap failed!"
+      run: echo "Infrastructure bootstrap failed!"

@@ -40,9 +40,9 @@ variable "global_secondary_indexes" {
   description = "List of global secondary indexes"
   type = list(object({
     name               = string
-    hash_key          = string
-    range_key         = optional(string)
-    projection_type   = string
+    hash_key           = string
+    range_key          = optional(string)
+    projection_type    = string
     non_key_attributes = optional(list(string), [])
   }))
   default = []

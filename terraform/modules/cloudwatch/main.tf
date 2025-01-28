@@ -62,12 +62,12 @@ resource "aws_cloudwatch_metric_alarm" "api_errors" {
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "5XXError"
-  namespace          = "AWS/ApiGateway"
-  period             = "300"
-  statistic          = "Sum"
-  threshold          = var.api_error_threshold
-  alarm_description  = "This metric monitors API Gateway 5XX errors"
-  alarm_actions      = [aws_sns_topic.alarms[0].arn]
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = var.api_error_threshold
+  alarm_description   = "This metric monitors API Gateway 5XX errors"
+  alarm_actions       = [aws_sns_topic.alarms[0].arn]
 
   dimensions = {
     ApiName = "${var.service}-${var.environment}"
@@ -81,12 +81,12 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "Errors"
-  namespace          = "AWS/Lambda"
-  period             = "300"
-  statistic          = "Sum"
-  threshold          = var.lambda_error_threshold
-  alarm_description  = "This metric monitors Lambda function errors"
-  alarm_actions      = [aws_sns_topic.alarms[0].arn]
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = var.lambda_error_threshold
+  alarm_description   = "This metric monitors Lambda function errors"
+  alarm_actions       = [aws_sns_topic.alarms[0].arn]
 
   dimensions = {
     FunctionName = "${var.service}-${var.environment}"

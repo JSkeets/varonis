@@ -283,7 +283,7 @@ jobs:
     - name: Notify Success
       if: success()
       run: |
-        echo "✅ Master deployment to ${{ github.event.inputs.environment }} completed successfully!"
+        echo "Master deployment to ${{ github.event.inputs.environment }} completed successfully!"
         echo "API Gateway URL: ${{ env.API_URL }}"
         echo "Example curl command:"
         echo "curl -X POST ${{ env.API_URL }}/restaurant/query -H 'Content-Type: application/json' -d '{\"query\": \"test query\"}'"
@@ -291,4 +291,4 @@ jobs:
     - name: Notify Failure
       if: failure()
       run: |
-        echo "❌ Master deployment to ${{ github.event.inputs.environment }} failed!" 
+        echo "Master deployment to ${{ github.event.inputs.environment }} failed!" 
