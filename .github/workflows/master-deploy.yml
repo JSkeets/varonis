@@ -31,6 +31,7 @@ jobs:
       with:
         script: |
           const startTime = new Date().toISOString();
+          console.log(`Starting workflow dispatch at ${startTime}`);
           
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
@@ -40,22 +41,31 @@ jobs:
             inputs: { environment: context.payload.inputs.environment }
           });
           
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log('Waiting 5 seconds for workflow to be registered...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
           
           const runs = await github.rest.actions.listWorkflowRuns({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'infrastructure-bootstrap.yml',
             branch: 'main',
-            created: `>=${startTime}`,
-            per_page: 1
+            per_page: 5
           });
           
-          if (runs.data.workflow_runs.length === 0) {
+          console.log('Found workflow runs:', JSON.stringify(runs.data.workflow_runs.map(r => ({
+            id: r.id,
+            created_at: r.created_at,
+            status: r.status
+          })), null, 2));
+          
+          const newRun = runs.data.workflow_runs.find(run => new Date(run.created_at) >= new Date(startTime));
+          
+          if (!newRun) {
             throw new Error('Could not find new workflow run');
           }
           
-          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
+          console.log(`Selected workflow run ID: ${newRun.id} created at ${newRun.created_at}`);
+          core.setOutput('run_id', newRun.id.toString());
 
     - name: Wait for Bootstrap
       uses: ./.github/actions/wait-for-workflow
@@ -70,6 +80,7 @@ jobs:
       with:
         script: |
           const startTime = new Date().toISOString();
+          console.log(`Starting workflow dispatch at ${startTime}`);
           
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
@@ -79,22 +90,31 @@ jobs:
             inputs: { environment: context.payload.inputs.environment }
           });
           
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log('Waiting 5 seconds for workflow to be registered...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
           
           const runs = await github.rest.actions.listWorkflowRuns({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'build-and-push.yml',
             branch: 'main',
-            created: `>=${startTime}`,
-            per_page: 1
+            per_page: 5
           });
           
-          if (runs.data.workflow_runs.length === 0) {
+          console.log('Found workflow runs:', JSON.stringify(runs.data.workflow_runs.map(r => ({
+            id: r.id,
+            created_at: r.created_at,
+            status: r.status
+          })), null, 2));
+          
+          const newRun = runs.data.workflow_runs.find(run => new Date(run.created_at) >= new Date(startTime));
+          
+          if (!newRun) {
             throw new Error('Could not find new workflow run');
           }
           
-          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
+          console.log(`Selected workflow run ID: ${newRun.id} created at ${newRun.created_at}`);
+          core.setOutput('run_id', newRun.id.toString());
 
     - name: Wait for Build
       uses: ./.github/actions/wait-for-workflow
@@ -109,6 +129,7 @@ jobs:
       with:
         script: |
           const startTime = new Date().toISOString();
+          console.log(`Starting workflow dispatch at ${startTime}`);
           
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
@@ -118,22 +139,31 @@ jobs:
             inputs: { environment: context.payload.inputs.environment }
           });
           
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log('Waiting 5 seconds for workflow to be registered...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
           
           const runs = await github.rest.actions.listWorkflowRuns({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'terraform-apply.yml',
             branch: 'main',
-            created: `>=${startTime}`,
-            per_page: 1
+            per_page: 5
           });
           
-          if (runs.data.workflow_runs.length === 0) {
+          console.log('Found workflow runs:', JSON.stringify(runs.data.workflow_runs.map(r => ({
+            id: r.id,
+            created_at: r.created_at,
+            status: r.status
+          })), null, 2));
+          
+          const newRun = runs.data.workflow_runs.find(run => new Date(run.created_at) >= new Date(startTime));
+          
+          if (!newRun) {
             throw new Error('Could not find new workflow run');
           }
           
-          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
+          console.log(`Selected workflow run ID: ${newRun.id} created at ${newRun.created_at}`);
+          core.setOutput('run_id', newRun.id.toString());
 
     - name: Wait for Terraform
       uses: ./.github/actions/wait-for-workflow
@@ -148,6 +178,7 @@ jobs:
       with:
         script: |
           const startTime = new Date().toISOString();
+          console.log(`Starting workflow dispatch at ${startTime}`);
           
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
@@ -157,22 +188,31 @@ jobs:
             inputs: { environment: context.payload.inputs.environment }
           });
           
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log('Waiting 5 seconds for workflow to be registered...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
           
           const runs = await github.rest.actions.listWorkflowRuns({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'seed-dynamodb.yml',
             branch: 'main',
-            created: `>=${startTime}`,
-            per_page: 1
+            per_page: 5
           });
           
-          if (runs.data.workflow_runs.length === 0) {
+          console.log('Found workflow runs:', JSON.stringify(runs.data.workflow_runs.map(r => ({
+            id: r.id,
+            created_at: r.created_at,
+            status: r.status
+          })), null, 2));
+          
+          const newRun = runs.data.workflow_runs.find(run => new Date(run.created_at) >= new Date(startTime));
+          
+          if (!newRun) {
             throw new Error('Could not find new workflow run');
           }
           
-          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
+          console.log(`Selected workflow run ID: ${newRun.id} created at ${newRun.created_at}`);
+          core.setOutput('run_id', newRun.id.toString());
 
     - name: Wait for Seed
       uses: ./.github/actions/wait-for-workflow
@@ -194,6 +234,7 @@ jobs:
       with:
         script: |
           const startTime = new Date().toISOString();
+          console.log(`Starting workflow dispatch at ${startTime}`);
           
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
@@ -206,22 +247,31 @@ jobs:
             }
           });
           
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.log('Waiting 5 seconds for workflow to be registered...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
           
           const runs = await github.rest.actions.listWorkflowRuns({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'deploy-api.yml',
             branch: 'main',
-            created: `>=${startTime}`,
-            per_page: 1
+            per_page: 5
           });
           
-          if (runs.data.workflow_runs.length === 0) {
+          console.log('Found workflow runs:', JSON.stringify(runs.data.workflow_runs.map(r => ({
+            id: r.id,
+            created_at: r.created_at,
+            status: r.status
+          })), null, 2));
+          
+          const newRun = runs.data.workflow_runs.find(run => new Date(run.created_at) >= new Date(startTime));
+          
+          if (!newRun) {
             throw new Error('Could not find new workflow run');
           }
           
-          core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
+          console.log(`Selected workflow run ID: ${newRun.id} created at ${newRun.created_at}`);
+          core.setOutput('run_id', newRun.id.toString());
 
     - name: Wait for Deploy
       uses: ./.github/actions/wait-for-workflow
