@@ -21,6 +21,11 @@ on:
           - staging
           - prod
 
+permissions:
+  contents: read
+  actions: write
+  id-token: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
