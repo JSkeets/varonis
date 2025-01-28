@@ -27,10 +27,9 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event_name == 'push' && 'dev' || 'pr' }}
-    
     steps:
     - name: Trigger Build and Push
       uses: actions/github-script@v6
@@ -46,11 +45,13 @@ jobs:
             }
           })
 
-    - name: Wait for Build
-      run: sleep 30
-
+  deploy:
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}
+    steps:
     - name: Deploy API
-      if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
       uses: actions/github-script@v6
       with:
         script: |
@@ -65,6 +66,11 @@ jobs:
             }
           })
 
+  check-status:
+    needs: [build, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
     - name: Check Workflow Status
       uses: actions/github-script@v6
       with:
@@ -88,17 +94,14 @@ jobs:
             }
           }
 
-    - name: Notify Success
-      if: success()
+    - name: Notify Status
       run: |
-        echo "✅ CI/CD pipeline completed successfully!"
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          echo "Image deployed to ${{ inputs.environment }} environment"
-        elif [[ "${{ github.event_name }}" == "push" ]]; then
-          echo "Image deployed to dev environment"
-        fi
-
-    - name: Notify Failure
-      if: failure()
-      run: |
-        echo "❌ CI/CD pipeline failed!" 
+        if [[ "${{ job.status }}" == "success" ]]; then
+          echo "✅ CI/CD pipeline completed successfully!"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Image deployed to ${{ inputs.environment }} environment"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "Image deployed to dev environment"
+          fi
+        else
+          echo "❌ CI/CD pipeline failed!" 

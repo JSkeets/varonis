@@ -19,20 +19,10 @@ permissions:
   id-token: write
 
 jobs:
-  deploy:
+  bootstrap:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
-    
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-
     - name: Trigger Infrastructure Bootstrap
       uses: actions/github-script@v6
       with:
@@ -47,9 +37,11 @@ jobs:
             }
           })
 
-    - name: Wait for Bootstrap
-      run: sleep 30
-
+  build:
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
     - name: Trigger Build and Push
       uses: actions/github-script@v6
       with:
@@ -64,9 +56,11 @@ jobs:
             }
           })
 
-    - name: Wait for Build
-      run: sleep 30
-
+  terraform:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
     - name: Trigger Terraform Deploy
       uses: actions/github-script@v6
       with:
@@ -81,9 +75,11 @@ jobs:
             }
           })
 
-    - name: Wait for Terraform
-      run: sleep 30
-
+  seed:
+    needs: terraform
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
     - name: Trigger DynamoDB Seed
       uses: actions/github-script@v6
       with:
@@ -98,8 +94,19 @@ jobs:
             }
           })
 
-    - name: Wait for Seed
-      run: sleep 30
+  deploy-api:
+    needs: seed
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
     - name: Deploy API
       uses: actions/github-script@v6
@@ -122,6 +129,23 @@ jobs:
         API_URL=$(terraform output -raw api_gateway_url)
         echo "API_URL=$API_URL" >> $GITHUB_ENV
 
+    - name: Notify Success
+      if: success()
+      run: |
+        echo "✅ Master deployment to ${{ github.event.inputs.environment }} completed successfully!"
+        echo "API Gateway URL: ${{ env.API_URL }}"
+        echo "Example curl command:"
+        echo "curl -X POST ${{ env.API_URL }}/restaurant/query -H 'Content-Type: application/json' -d '{\"query\": \"test query\"}'"
+
+    - name: Notify Failure
+      if: failure()
+      run: |
+        echo "❌ Master deployment to ${{ github.event.inputs.environment }} failed!"
+
+  check-status:
+    needs: [bootstrap, build, terraform, seed, deploy-api]
+    runs-on: ubuntu-latest
+    steps:
     - name: Check Workflow Status
       uses: actions/github-script@v6
       with:
@@ -146,17 +170,4 @@ jobs:
             if (runs.data.workflow_runs[0].conclusion !== 'success') {
               core.setFailed(`Workflow ${workflow} failed or is still running`);
             }
-          }
-
-    - name: Notify Success
-      if: success()
-      run: |
-        echo "✅ Master deployment to ${{ github.event.inputs.environment }} completed successfully!"
-        echo "API Gateway URL: ${{ env.API_URL }}"
-        echo "Example curl command:"
-        echo "curl -X POST ${{ env.API_URL }}/restaurant/query -H 'Content-Type: application/json' -d '{\"query\": \"test query\"}'"
-
-    - name: Notify Failure
-      if: failure()
-      run: |
-        echo "❌ Master deployment to ${{ github.event.inputs.environment }} failed!" 
+          } 
