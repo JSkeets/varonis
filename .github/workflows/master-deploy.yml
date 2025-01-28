@@ -52,15 +52,18 @@ jobs:
             });
             
             if (runs.data.workflow_runs.length) {
-              const status = runs.data.workflow_runs[0].conclusion;
-              console.log(`Infrastructure Bootstrap status: ${status}`);
+              const run = runs.data.workflow_runs[0];
+              const status = run.status;  // 'queued', 'in_progress', or 'completed'
+              const conclusion = run.conclusion;  // null, 'success', 'failure', etc.
               
-              if (status === null) {
+              console.log(`Infrastructure Bootstrap - Status: ${status}, Conclusion: ${conclusion}`);
+              
+              if (status !== 'completed') {
                 console.log('Workflow still running...');
-              } else if (status === 'success') {
+              } else if (conclusion === 'success') {
                 completed = true;
-              } else if (status === 'failure' || status === 'cancelled') {
-                core.setFailed(`Infrastructure Bootstrap failed with status: ${status}`);
+              } else {
+                core.setFailed(`Infrastructure Bootstrap failed with conclusion: ${conclusion}`);
                 return;
               }
             } else {
@@ -107,15 +110,18 @@ jobs:
             });
             
             if (runs.data.workflow_runs.length) {
-              const status = runs.data.workflow_runs[0].conclusion;
-              console.log(`Build and Push status: ${status}`);
+              const run = runs.data.workflow_runs[0];
+              const status = run.status;
+              const conclusion = run.conclusion;
               
-              if (status === null) {
+              console.log(`Build and Push - Status: ${status}, Conclusion: ${conclusion}`);
+              
+              if (status !== 'completed') {
                 console.log('Workflow still running...');
-              } else if (status === 'success') {
+              } else if (conclusion === 'success') {
                 completed = true;
-              } else if (status === 'failure' || status === 'cancelled') {
-                core.setFailed(`Build and Push failed with status: ${status}`);
+              } else {
+                core.setFailed(`Build and Push failed with conclusion: ${conclusion}`);
                 return;
               }
             } else {
@@ -162,15 +168,18 @@ jobs:
             });
             
             if (runs.data.workflow_runs.length) {
-              const status = runs.data.workflow_runs[0].conclusion;
-              console.log(`Terraform Apply status: ${status}`);
+              const run = runs.data.workflow_runs[0];
+              const status = run.status;
+              const conclusion = run.conclusion;
               
-              if (status === null) {
+              console.log(`Terraform Apply - Status: ${status}, Conclusion: ${conclusion}`);
+              
+              if (status !== 'completed') {
                 console.log('Workflow still running...');
-              } else if (status === 'success') {
+              } else if (conclusion === 'success') {
                 completed = true;
-              } else if (status === 'failure' || status === 'cancelled') {
-                core.setFailed(`Terraform Apply failed with status: ${status}`);
+              } else {
+                core.setFailed(`Terraform Apply failed with conclusion: ${conclusion}`);
                 return;
               }
             } else {
@@ -217,15 +226,18 @@ jobs:
             });
             
             if (runs.data.workflow_runs.length) {
-              const status = runs.data.workflow_runs[0].conclusion;
-              console.log(`DynamoDB Seed status: ${status}`);
+              const run = runs.data.workflow_runs[0];
+              const status = run.status;
+              const conclusion = run.conclusion;
               
-              if (status === null) {
+              console.log(`DynamoDB Seed - Status: ${status}, Conclusion: ${conclusion}`);
+              
+              if (status !== 'completed') {
                 console.log('Workflow still running...');
-              } else if (status === 'success') {
+              } else if (conclusion === 'success') {
                 completed = true;
-              } else if (status === 'failure' || status === 'cancelled') {
-                core.setFailed(`DynamoDB Seed failed with status: ${status}`);
+              } else {
+                core.setFailed(`DynamoDB Seed failed with conclusion: ${conclusion}`);
                 return;
               }
             } else {
@@ -301,15 +313,18 @@ jobs:
             });
             
             if (runs.data.workflow_runs.length) {
-              const status = runs.data.workflow_runs[0].conclusion;
-              console.log(`API Deploy status: ${status}`);
+              const run = runs.data.workflow_runs[0];
+              const status = run.status;
+              const conclusion = run.conclusion;
               
-              if (status === null) {
+              console.log(`API Deploy - Status: ${status}, Conclusion: ${conclusion}`);
+              
+              if (status !== 'completed') {
                 console.log('Workflow still running...');
-              } else if (status === 'success') {
+              } else if (conclusion === 'success') {
                 completed = true;
-              } else if (status === 'failure' || status === 'cancelled') {
-                core.setFailed(`API Deploy failed with status: ${status}`);
+              } else {
+                core.setFailed(`API Deploy failed with conclusion: ${conclusion}`);
                 return;
               }
             } else {
