@@ -61,14 +61,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     steps:
-    - name: Trigger Terraform Deploy
+    - name: Trigger Terraform Apply
       uses: actions/github-script@v6
       with:
         script: |
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            workflow_id: 'terraform-deploy.yml',
+            workflow_id: 'terraform-apply.yml',
             ref: 'main',
             inputs: {
               environment: '${{ github.event.inputs.environment }}'
@@ -153,7 +153,7 @@ jobs:
           const workflows = [
             'infrastructure-bootstrap.yml',
             'build-and-push.yml',
-            'terraform-deploy.yml',
+            'terraform-apply.yml',
             'seed-dynamodb.yml',
             'deploy-api.yml'
           ];

@@ -13,6 +13,10 @@ on:
           - staging
           - prod
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   setup-ecr:
     runs-on: ubuntu-latest
@@ -32,24 +36,90 @@ jobs:
       run: |
         # Check if S3 bucket exists, create if it doesn't
         if ! aws s3api head-bucket --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state 2>/dev/null; then
+          # Create bucket with encryption enabled
           aws s3api create-bucket \
             --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
             --region us-east-1
-          
-          # Enable versioning on the new bucket
+
+          # Enable versioning
           aws s3api put-bucket-versioning \
             --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
             --versioning-configuration Status=Enabled
+
+          # Enable encryption
+          aws s3api put-bucket-encryption \
+            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
+            --server-side-encryption-configuration '{
+              "Rules": [
+                {
+                  "ApplyServerSideEncryptionByDefault": {
+                    "SSEAlgorithm": "AES256"
+                  }
+                }
+              ]
+            }'
+
+          # Enable bucket public access blocking
+          aws s3api put-public-access-block \
+            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
+            --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+          # Enable bucket versioning MFA delete protection
+          aws s3api put-bucket-versioning \
+            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
+            --versioning-configuration Status=Enabled,MFADelete=Enabled
+
+          # Add bucket policy to enforce encryption
+          aws s3api put-bucket-policy \
+            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
+            --policy '{
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Sid": "DenyIncorrectEncryptionHeader",
+                  "Effect": "Deny",
+                  "Principal": "*",
+                  "Action": "s3:PutObject",
+                  "Resource": "arn:aws:s3:::restaurant-svc-${{ github.event.inputs.environment }}-terraform-state/*",
+                  "Condition": {
+                    "StringNotEquals": {
+                      "s3:x-amz-server-side-encryption": "AES256"
+                    }
+                  }
+                },
+                {
+                  "Sid": "DenyUnencryptedObjectUploads",
+                  "Effect": "Deny",
+                  "Principal": "*",
+                  "Action": "s3:PutObject",
+                  "Resource": "arn:aws:s3:::restaurant-svc-${{ github.event.inputs.environment }}-terraform-state/*",
+                  "Condition": {
+                    "Null": {
+                      "s3:x-amz-server-side-encryption": "true"
+                    }
+                  }
+                }
+              ]
+            }'
         fi
 
         # Check if DynamoDB table exists, create if it doesn't
         if ! aws dynamodb describe-table --table-name restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock 2>/dev/null; then
+          # Create table with encryption and deletion protection
           aws dynamodb create-table \
             --table-name restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock \
             --attribute-definitions AttributeName=LockID,AttributeType=S \
             --key-schema AttributeName=LockID,KeyType=HASH \
-            --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
+            --billing-mode PAY_PER_REQUEST \
+            --sse-specification Enabled=true,SSEType=KMS \
+            --deletion-protection-enabled true \
+            --tags Key=Environment,Value=${{ github.event.inputs.environment }} \
             --region us-east-1
+
+          # Enable point-in-time recovery
+          aws dynamodb update-continuous-backups \
+            --table-name restaurant-svc-${{ github.event.inputs.environment }}-terraform-lock \
+            --point-in-time-recovery-specification PointInTimeRecoveryEnabled=true
         fi
 
     - name: Setup Terraform
@@ -60,3 +130,11 @@ jobs:
         cd terraform/environments/us-east-1/${{ github.event.inputs.environment }}
         terraform init
         terraform apply -auto-approve -var-file=${{ github.event.inputs.environment }}.tfvars -target=module.restaurant_svc_ecr
+
+    - name: Notify Success
+      if: success()
+      run: echo "✅ Infrastructure bootstrap completed successfully!"
+
+    - name: Notify Failure
+      if: failure()
+      run: echo "❌ Infrastructure bootstrap failed!"
