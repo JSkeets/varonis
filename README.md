@@ -1,5 +1,5 @@
 # Prerequisites
-- Github actions configured with AWS credentials
+- Github account, configure AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in the repo settings under environment secrets
 
 
 # Approach

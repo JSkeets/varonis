@@ -280,12 +280,6 @@ jobs:
         branch: 'main'
         run_id: ${{ steps.deploy.outputs.run_id }}
 
-    - name: Get API Gateway URL
-      run: |
-        cd terraform/environments/us-east-1/${{ github.event.inputs.environment }}
-        API_URL=$(terraform output -raw api_gateway_url)
-        echo "API_URL=$API_URL" >> $GITHUB_ENV
-
     - name: Notify Success
       if: success()
       run: |
