@@ -58,49 +58,6 @@ jobs:
                 }
               ]
             }'
-
-          # Enable bucket public access blocking
-          aws s3api put-public-access-block \
-            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
-            --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
-
-          # Enable bucket versioning MFA delete protection
-          aws s3api put-bucket-versioning \
-            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
-            --versioning-configuration Status=Enabled,MFADelete=Enabled
-
-          # Add bucket policy to enforce encryption
-          aws s3api put-bucket-policy \
-            --bucket restaurant-svc-${{ github.event.inputs.environment }}-terraform-state \
-            --policy '{
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Sid": "DenyIncorrectEncryptionHeader",
-                  "Effect": "Deny",
-                  "Principal": "*",
-                  "Action": "s3:PutObject",
-                  "Resource": "arn:aws:s3:::restaurant-svc-${{ github.event.inputs.environment }}-terraform-state/*",
-                  "Condition": {
-                    "StringNotEquals": {
-                      "s3:x-amz-server-side-encryption": "AES256"
-                    }
-                  }
-                },
-                {
-                  "Sid": "DenyUnencryptedObjectUploads",
-                  "Effect": "Deny",
-                  "Principal": "*",
-                  "Action": "s3:PutObject",
-                  "Resource": "arn:aws:s3:::restaurant-svc-${{ github.event.inputs.environment }}-terraform-state/*",
-                  "Condition": {
-                    "Null": {
-                      "s3:x-amz-server-side-encryption": "true"
-                    }
-                  }
-                }
-              ]
-            }'
         fi
 
         # Check if DynamoDB table exists, create if it doesn't
