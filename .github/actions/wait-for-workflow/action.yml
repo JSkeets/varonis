@@ -19,7 +19,15 @@ runs:
         script: |
           const workflowId = '${{ inputs.workflow_id }}';
           const branch = '${{ inputs.branch }}';
+          
+          // Get current timestamp to find workflows triggered after this point
+          const startTime = new Date().toISOString();
+          
+          // Wait a few seconds to ensure the workflow has started
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
           let completed = false;
+          let targetRunId = null;
 
           while (!completed) {
             const runs = await github.rest.actions.listWorkflowRuns({
@@ -27,27 +35,46 @@ runs:
               repo: context.repo.repo,
               workflow_id: workflowId,
               branch: branch,
-              per_page: 1
+              per_page: 10
             });
 
             if (runs.data.workflow_runs.length) {
-              const run = runs.data.workflow_runs[0];
-              const { status, conclusion } = run;
+              // Find the first run that was created after our trigger
+              const targetRun = runs.data.workflow_runs.find(run => 
+                new Date(run.created_at) >= new Date(startTime)
+              );
 
-              console.log(`Workflow ${workflowId} Status: ${status}, Conclusion: ${conclusion}`);
-
-              if (status === 'completed') {
-                if (conclusion === 'success') {
-                  completed = true;
-                  console.log(`${workflowId} completed successfully!`);
-                } else {
-                  core.setFailed(`${workflowId} failed: ${conclusion}`);
-                  return;
+              if (targetRun) {
+                const { status, conclusion, id } = targetRun;
+                
+                // Store the run ID when we first find it
+                if (!targetRunId) {
+                  targetRunId = id;
+                  console.log(`Found matching workflow run: ${id}`);
                 }
+                
+                // Only check status for our specific run
+                if (id === targetRunId) {
+                  console.log(`Workflow ${workflowId} Status: ${status}, Conclusion: ${conclusion}`);
+
+                  if (status === 'completed') {
+                    if (conclusion === 'success') {
+                      completed = true;
+                      console.log(`${workflowId} completed successfully!`);
+                    } else {
+                      core.setFailed(`${workflowId} failed: ${conclusion}`);
+                      return;
+                    }
+                  }
+                }
+              } else {
+                console.log('Waiting for matching workflow run to appear...');
               }
             } else {
               console.log('No workflow runs found yet, waiting...');
             }
 
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            if (!completed) {
+              await new Promise(resolve => setTimeout(resolve, 10000));
+            }
           } 

@@ -19,127 +19,83 @@ permissions:
   id-token: write
 
 jobs:
-  bootstrap:
+  deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     steps:
     - uses: actions/checkout@v3
     
-    - name: Trigger Workflow
-      id: trigger_workflow
+    - name: Bootstrap Infrastructure
       uses: actions/github-script@v6
       with:
         script: |
-          const response = await github.rest.actions.createWorkflowDispatch({
+          await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'infrastructure-bootstrap.yml',
             ref: 'main',
-            inputs: {
-              environment: context.payload.inputs.environment
-            }
+            inputs: { environment: context.payload.inputs.environment }
           });
-          console.log('Triggered infrastructure bootstrap workflow');
-          return response;
 
-    - name: Wait for Workflow Completion
+    - name: Wait for Bootstrap
       uses: ./.github/actions/wait-for-workflow
       with:
-        workflow_id: infrastructure-bootstrap.yml
-        branch: main
+        workflow_id: 'infrastructure-bootstrap.yml'
+        branch: 'main'
 
-  build:
-    needs: bootstrap
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Trigger Workflow
-      id: trigger_workflow
+    - name: Build and Push
       uses: actions/github-script@v6
       with:
         script: |
-          const response = await github.rest.actions.createWorkflowDispatch({
+          await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'build-and-push.yml',
             ref: 'main',
-            inputs: {
-              environment: context.payload.inputs.environment
-            }
+            inputs: { environment: context.payload.inputs.environment }
           });
-          console.log('Triggered build and push workflow');
-          return response;
 
-    - name: Wait for Workflow Completion
+    - name: Wait for Build
       uses: ./.github/actions/wait-for-workflow
       with:
-        workflow_id: build-and-push.yml
-        branch: main
+        workflow_id: 'build-and-push.yml'
+        branch: 'main'
 
-  terraform:
-    needs: build
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
-    steps:
-    - name: Trigger Workflow
-      id: trigger_workflow
+    - name: Apply Terraform
       uses: actions/github-script@v6
       with:
         script: |
-          const response = await github.rest.actions.createWorkflowDispatch({
+          await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'terraform-apply.yml',
             ref: 'main',
-            inputs: {
-              environment: context.payload.inputs.environment
-            }
+            inputs: { environment: context.payload.inputs.environment }
           });
-          console.log('Triggered terraform apply workflow');
-          return response;
 
-    - name: Wait for Workflow Completion
+    - name: Wait for Terraform
       uses: ./.github/actions/wait-for-workflow
       with:
-        workflow_id: terraform-apply.yml
-        branch: main
+        workflow_id: 'terraform-apply.yml'
+        branch: 'main'
 
-  seed:
-    needs: terraform
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
-    steps:
-    - name: Trigger Workflow
-      id: trigger_workflow
+    - name: Seed DynamoDB
       uses: actions/github-script@v6
       with:
         script: |
-          const response = await github.rest.actions.createWorkflowDispatch({
+          await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'seed-dynamodb.yml',
             ref: 'main',
-            inputs: {
-              environment: context.payload.inputs.environment
-            }
+            inputs: { environment: context.payload.inputs.environment }
           });
-          console.log('Triggered DynamoDB seed workflow');
-          return response;
 
-    - name: Wait for Workflow Completion
+    - name: Wait for Seed
       uses: ./.github/actions/wait-for-workflow
       with:
-        workflow_id: seed-dynamodb.yml
-        branch: main
-
-  deploy-api:
-    needs: seed
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
-    steps:
-    - uses: actions/checkout@v3
+        workflow_id: 'seed-dynamodb.yml'
+        branch: 'main'
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v2
@@ -148,12 +104,11 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    - name: Trigger Workflow
-      id: trigger_workflow
+    - name: Deploy API
       uses: actions/github-script@v6
       with:
         script: |
-          const response = await github.rest.actions.createWorkflowDispatch({
+          await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
             workflow_id: 'deploy-api.yml',
@@ -163,14 +118,12 @@ jobs:
               image_tag: context.sha
             }
           });
-          console.log('Triggered API deploy workflow');
-          return response;
 
-    - name: Wait for Workflow Completion
+    - name: Wait for Deploy
       uses: ./.github/actions/wait-for-workflow
       with:
-        workflow_id: deploy-api.yml
-        branch: main
+        workflow_id: 'deploy-api.yml'
+        branch: 'main'
 
     - name: Get API Gateway URL
       run: |
@@ -189,59 +142,4 @@ jobs:
     - name: Notify Failure
       if: failure()
       run: |
-        echo "❌ Master deployment to ${{ github.event.inputs.environment }} failed!"
-
-  check-status:
-    needs: [bootstrap, build, terraform, seed, deploy-api]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Wait for workflows to complete
-      run: sleep 30
-
-    - name: Check Workflow Status
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const workflows = [
-            'infrastructure-bootstrap.yml',
-            'build-and-push.yml',
-            'terraform-apply.yml',
-            'seed-dynamodb.yml',
-            'deploy-api.yml'
-          ];
-          
-          for (const workflowId of workflows) {
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: workflowId,
-              branch: 'main',
-              per_page: 1
-            });
-            
-            if (!runs.data.workflow_runs.length) {
-              core.setFailed(`No runs found for ${workflowId}`);
-              return;
-            }
-            
-            const run = runs.data.workflow_runs[0];
-            const { status, conclusion } = run;
-            console.log(`${workflowId} Status: ${status}, Conclusion: ${conclusion}`);
-            
-            if (status !== 'completed' || conclusion !== 'success') {
-              core.setFailed(`Workflow ${workflowId} failed with Status: ${status}, Conclusion: ${conclusion}`);
-              return;
-            }
-          }
-          
-          console.log('All workflows completed successfully!');
-
-    - name: Notify Success
-      if: success()
-      run: |
-        echo "✅ All deployments completed successfully!"
-
-    - name: Notify Failure
-      if: failure()
-      run: |
-        echo "❌ One or more deployments failed. Check the workflow logs for details." 
+        echo "❌ Master deployment to ${{ github.event.inputs.environment }} failed!" 

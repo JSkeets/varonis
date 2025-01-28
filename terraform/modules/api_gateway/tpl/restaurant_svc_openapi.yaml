@@ -1,1 +1,52 @@
- 
+openapi: "3.0.1"
+info:
+  title: "Restaurant Service API"
+  version: "1.0.0"
+paths:
+  /restaurant/query:
+    post:
+      x-amazon-apigateway-integration:
+        uri: ${integrations["/restaurant/query"].uri}
+        httpMethod: "POST"
+        type: ${integrations["/restaurant/query"].type}
+        timeoutInMillis: ${integrations["/restaurant/query"].timeout_ms}
+        passthroughBehavior: "when_no_match"
+        contentHandling: "CONVERT_TO_TEXT"
+      security: []  # This removes auth requirement
+      responses:
+        "200":
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurantRecommendations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        style:
+                          type: string
+                        address:
+                          type: string
+                        openHour:
+                          type: string
+                        closeHour:
+                          type: string
+                        vegetarian:
+                          type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: "Natural language query for restaurant search" 
