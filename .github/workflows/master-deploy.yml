@@ -30,6 +30,8 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          const startTime = new Date().toISOString();
+          
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -45,11 +47,12 @@ jobs:
             repo: context.repo.repo,
             workflow_id: 'infrastructure-bootstrap.yml',
             branch: 'main',
+            created: `>=${startTime}`,
             per_page: 1
           });
           
           if (runs.data.workflow_runs.length === 0) {
-            throw new Error('Could not find workflow run');
+            throw new Error('Could not find new workflow run');
           }
           
           core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
@@ -66,6 +69,8 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          const startTime = new Date().toISOString();
+          
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -81,11 +86,12 @@ jobs:
             repo: context.repo.repo,
             workflow_id: 'build-and-push.yml',
             branch: 'main',
+            created: `>=${startTime}`,
             per_page: 1
           });
           
           if (runs.data.workflow_runs.length === 0) {
-            throw new Error('Could not find workflow run');
+            throw new Error('Could not find new workflow run');
           }
           
           core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
@@ -102,6 +108,8 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          const startTime = new Date().toISOString();
+          
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -117,11 +125,12 @@ jobs:
             repo: context.repo.repo,
             workflow_id: 'terraform-apply.yml',
             branch: 'main',
+            created: `>=${startTime}`,
             per_page: 1
           });
           
           if (runs.data.workflow_runs.length === 0) {
-            throw new Error('Could not find workflow run');
+            throw new Error('Could not find new workflow run');
           }
           
           core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
@@ -138,6 +147,8 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          const startTime = new Date().toISOString();
+          
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -153,11 +164,12 @@ jobs:
             repo: context.repo.repo,
             workflow_id: 'seed-dynamodb.yml',
             branch: 'main',
+            created: `>=${startTime}`,
             per_page: 1
           });
           
           if (runs.data.workflow_runs.length === 0) {
-            throw new Error('Could not find workflow run');
+            throw new Error('Could not find new workflow run');
           }
           
           core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
@@ -181,6 +193,8 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          const startTime = new Date().toISOString();
+          
           await github.rest.actions.createWorkflowDispatch({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -199,11 +213,12 @@ jobs:
             repo: context.repo.repo,
             workflow_id: 'deploy-api.yml',
             branch: 'main',
+            created: `>=${startTime}`,
             per_page: 1
           });
           
           if (runs.data.workflow_runs.length === 0) {
-            throw new Error('Could not find workflow run');
+            throw new Error('Could not find new workflow run');
           }
           
           core.setOutput('run_id', runs.data.workflow_runs[0].id.toString());
