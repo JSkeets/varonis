@@ -10,3 +10,7 @@
 # Assumptions
 - The prompt stated that we should reseed the dynamoDB if we add or modify new restaurants, so that functionality exists in the code base with seed data, but please note that we also state that this data is highly confidential, and I would never commit confidential data to github.
 - I would also never host any production code in a public github, for ease of sharing my solution I have done so, but just want to be explicit about this.
+
+# To deploy
+- Assuming you have this in your own github and have forked the repo it is as simple as running the `master-deploy` workflow. If you wish to run it manually
+- 

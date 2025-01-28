@@ -1,6 +1,16 @@
 name: Seed DynamoDB
 
 on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to seed'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
   push:
     paths:
       - 'data/restaurants.json'
