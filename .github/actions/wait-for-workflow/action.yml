@@ -3,7 +3,7 @@ description: 'Wait for a workflow to complete and check its status'
 
 inputs:
   workflow_id:
-    description: 'The workflow file name to check'
+    description: 'The workflow file name to check (including .yml)'
     required: true
   branch:
     description: 'The branch to check'
@@ -21,87 +21,44 @@ runs:
       uses: actions/github-script@v6
       with:
         script: |
-          const workflowId = '${{ inputs.workflow_id }}';
-          const branch = '${{ inputs.branch }}';
+          const workflowFileName = '${{ inputs.workflow_id }}';
           const timeoutMinutes = parseInt('${{ inputs.timeout }}');
+          const intervalSeconds = 10;
           
-          const startTime = new Date(Date.now() - 30000); // Look back 30 seconds
-          const timeoutTime = new Date(Date.now() + timeoutMinutes * 60000);
+          console.log(`Looking for workflow file: ${workflowFileName}`);
           
-          console.log('Waiting initial 15 seconds for workflow to start...');
-          await new Promise(resolve => setTimeout(resolve, 15000));
+          let endTime = Date.now() + timeoutMinutes * 60 * 1000;
+          let status = 'in_progress';
           
-          let completed = false;
-          let targetRunId = null;
-          let attempts = 0;
-
-          while (!completed) {
-            if (new Date() > timeoutTime) {
-              throw new Error(`Timeout waiting for workflow ${workflowId} after ${timeoutMinutes} minutes`);
-            }
-
-            try {
-              console.log(`Checking workflow runs (attempt ${++attempts})...`);
+          while (Date.now() < endTime) {
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowFileName,
+              branch: '${{ inputs.branch }}',
+              per_page: 1
+            });
+            
+            if (runs.data.workflow_runs.length > 0) {
+              const run = runs.data.workflow_runs[0];
+              status = run.status;
               
-              const runs = await github.rest.actions.listWorkflowRuns({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: workflowId,
-                branch: branch,
-                per_page: 20,
-                status: 'in_progress,queued,completed'
-              });
-
-              if (runs.data.workflow_runs.length > 0) {
-                const sortedRuns = runs.data.workflow_runs.sort((a, b) => 
-                  new Date(b.created_at) - new Date(a.created_at)
-                );
-
-                const targetRun = sortedRuns.find(run => 
-                  Math.abs(new Date(run.created_at) - startTime) < 60000
-                );
-
-                if (targetRun) {
-                  const { status, conclusion, id, html_url } = targetRun;
-                  
-                  if (!targetRunId) {
-                    targetRunId = id;
-                    console.log(`Found matching workflow run: ${id}`);
-                    console.log(`Workflow URL: ${html_url}`);
-                  }
-                  
-                  if (id === targetRunId) {
-                    console.log(`Run ${id} Status: ${status}, Conclusion: ${conclusion}`);
-
-                    if (status === 'completed') {
-                      if (conclusion === 'success') {
-                        completed = true;
-                        console.log(`Workflow ${workflowId} completed successfully!`);
-                      } else {
-                        throw new Error(`Workflow failed with conclusion: ${conclusion}`);
-                      }
-                    } else if (status === 'queued' || status === 'in_progress') {
-                      console.log(`Workflow is ${status}. Waiting...`);
-                    } else {
-                      throw new Error(`Unexpected workflow status: ${status}`);
-                    }
-                  }
+              console.log(`Workflow run status: ${status}`);
+              if (status === 'completed') {
+                console.log(`Workflow conclusion: ${run.conclusion}`);
+                if (run.conclusion === 'success') {
+                  console.log('Workflow completed successfully!');
+                  break;
                 } else {
-                  console.log('No matching workflow run found yet. Still searching...');
+                  throw new Error(`Workflow failed: ${run.conclusion}`);
                 }
-              } else {
-                console.log('No workflow runs found yet. Waiting...');
-              }
-            } catch (error) {
-              console.log(`Error checking workflow: ${error.message}`);
-              if (error.status === 404) {
-                throw new Error(`Workflow ${workflowId} not found`);
               }
             }
-
-            if (!completed) {
-              const delay = Math.min(10000 * Math.pow(1.1, attempts), 30000);
-              console.log(`Waiting ${Math.round(delay/1000)} seconds before next check...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
+            
+            console.log(`Waiting for ${intervalSeconds} seconds before checking again...`);
+            await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
+          }
+          
+          if (status !== 'completed') {
+            throw new Error('Timeout waiting for workflow to complete');
           } 

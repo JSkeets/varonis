@@ -1,4 +1,4 @@
-name: Infrastructure Bootstrap (State Backend & ECR)
+name: Infrastructure Bootstrap
 
 on:
   workflow_dispatch:
