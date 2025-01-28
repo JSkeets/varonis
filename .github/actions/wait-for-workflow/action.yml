@@ -1,0 +1,53 @@
+name: 'Wait for Workflow'
+description: 'Wait for a workflow to complete and check its status'
+
+inputs:
+  workflow_id:
+    description: 'The workflow file name to check'
+    required: true
+  branch:
+    description: 'The branch to check'
+    required: true
+    default: 'main'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for Workflow Completion
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const workflowId = '${{ inputs.workflow_id }}';
+          const branch = '${{ inputs.branch }}';
+          let completed = false;
+
+          while (!completed) {
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowId,
+              branch: branch,
+              per_page: 1
+            });
+
+            if (runs.data.workflow_runs.length) {
+              const run = runs.data.workflow_runs[0];
+              const { status, conclusion } = run;
+
+              console.log(`Workflow ${workflowId} Status: ${status}, Conclusion: ${conclusion}`);
+
+              if (status === 'completed') {
+                if (conclusion === 'success') {
+                  completed = true;
+                  console.log(`${workflowId} completed successfully!`);
+                } else {
+                  core.setFailed(`${workflowId} failed: ${conclusion}`);
+                  return;
+                }
+              }
+            } else {
+              console.log('No workflow runs found yet, waiting...');
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 10000));
+          } 
